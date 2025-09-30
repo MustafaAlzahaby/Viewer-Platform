@@ -376,7 +376,7 @@ export function useAuth() {
     hasRole,
     // User status
     isActive: profile?.is_active === true,
-    userRole: profile?.role || null
+    userRole: profile?.role || null,
     // Session management
     resetSessionTimeout
   }
