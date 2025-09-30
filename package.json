@@ -1,0 +1,53 @@
+{
+  "name": "RME Viewer",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "author": "Rowad Modern Engineering",
+  "contributors": [
+    "Mostafa Alzahaby (https://github.com/MustafaAlzahaby) (https://www.linkedin.com/in/mostafa-elzahaby/)",
+    "Ahmed Yousry (https://github.com/au3m) (https://www.linkedin.com/in/au3m/)"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:reset": "supabase db reset"
+  },
+  "devDependencies": {
+    "@types/stats.js": "^0.17.4",
+    "@types/three": "^0.178.1",
+    "@vitejs/plugin-react": "^5.0.2",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.14",
+    "typescript": "~5.8.3",
+    "vite": "^7.0.4"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.4",
+    "@thatopen/components": "3.1.2",
+    "@thatopen/components-front": "3.1.6",
+    "@thatopen/fragments": "3.1.6",
+    "@thatopen/ui": "^3.1.1",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.1.0",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
+    "@types/react-router-dom": "^5.3.3",
+    "framer-motion": "^12.23.12",
+    "lucide-react": "^0.542.0",
+    "mkcert": "^3.2.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-router-dom": "^7.9.1",
+    "stats.js": "^0.17.0",
+    "supabase": "^2.47.2",
+    "three": "0.178.0",
+    "web-ifc": "0.0.70",
+    "xlsx": "^0.18.5"
+  }
+}

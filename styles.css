@@ -1,0 +1,1180 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  overflow: hidden;
+}
+
+.full-screen {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+.options-menu {
+  position: fixed;
+  min-width: unset;
+  top: 5px;
+  right: 5px;
+  max-height: calc(100vh - 10px);
+}
+
+.phone-menu-toggler {
+  visibility: hidden;
+}
+
+@media (max-width: 480px) {
+  .options-menu {
+    visibility: hidden;
+    bottom: 5px;
+    left: 5px;
+  }
+
+  .options-menu-visible {
+    visibility: visible;
+  }
+
+  .phone-menu-toggler {
+    visibility: visible;
+    position: fixed;
+    top: 5px;
+    right: 5px;
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+#loading-spinner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.85);
+  z-index: 9999;
+}
+
+#loading-spinner div {
+  border: 8px solid #f3f3f3;
+  border-top: 8px solid #3498db;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  animation: spin 1s linear infinite;
+}
+
+.controls-container {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 25px;
+  padding: 15px 25px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.radio-group {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 0px 12px;
+  border-radius: 15px;
+  position: relative;
+}
+
+.radio-option:hover {
+  background: rgba(102, 126, 234, 0.1);
+  transform: translateY(-1px);
+}
+
+.radio-option input[type="radio"] {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #667eea;
+  border-radius: 50%;
+  margin-right: 8px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.radio-option input[type="radio"]:checked {
+  background: #667eea;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.radio-option input[type="radio"]:checked::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  background: white;
+  border-radius: 50%;
+}
+
+.radio-option label {
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+  font-size: 14px;
+  user-select: none;
+}
+
+.radio-option input[type="radio"]:checked + label {
+  color: #667eea;
+  font-weight: 600;
+}
+
+.status-indicator {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  color: #333;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.status-indicator {
+  transition: opacity 0.3s ease-in-out;
+}
+
+/* ============================================================================
+   RIGHT PANELS CONTAINER STYLES
+   ============================================================================ */
+
+.right-panels-container {
+  position: fixed !important;
+  top: 20px !important;
+  right: 20px !important;
+  z-index: 1000 !important;
+  width: 320px !important;
+  max-height: calc(100vh - 40px) !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  backdrop-filter: blur(15px) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+  overflow: hidden !important;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  animation: slideInFromRight 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.panels-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  padding: 16px 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.2) !important;
+}
+
+.panels-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  color: white !important;
+  font-weight: 600 !important;
+  font-size: 1rem !important;
+  letter-spacing: -0.02em !important;
+}
+
+.panels-icon {
+  width: 20px !important;
+  height: 20px !important;
+  color: white !important;
+}
+
+.panels-actions {
+  display: flex !important;
+  gap: 8px !important;
+}
+
+.collapse-all-btn,
+.expand-all-btn {
+  width: 32px !important;
+  height: 32px !important;
+  background: rgba(255, 255, 255, 0.15) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.collapse-all-btn:hover,
+.expand-all-btn:hover {
+  background: rgba(255, 255, 255, 0.25) !important;
+  transform: scale(1.05) !important;
+}
+
+.collapse-all-btn svg,
+.expand-all-btn svg {
+  width: 16px !important;
+  height: 16px !important;
+  color: white !important;
+}
+
+.panels-content {
+  max-height: calc(100vh - 120px) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 0 !important;
+}
+
+.panels-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.panels-content::-webkit-scrollbar-track {
+  background: rgba(248, 250, 252, 0.5);
+  border-radius: 3px;
+}
+
+.panels-content::-webkit-scrollbar-thumb {
+  background: rgba(203, 213, 225, 0.8);
+  border-radius: 3px;
+}
+
+.panels-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.9);
+}
+
+/* Right Panel Section Styles */
+.right-panel-section {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6) !important;
+  overflow: hidden !important;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.right-panel-section:last-child {
+  border-bottom: none !important;
+}
+
+.right-panel-section.collapsed .panel-content {
+  max-height: 0 !important;
+  opacity: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.right-panel-section.collapsed .chevron-icon {
+  transform: rotate(-90deg) !important;
+}
+
+.panel-header {
+  background: rgba(248, 250, 252, 0.95) !important;
+  padding: 16px 20px !important;
+  cursor: pointer !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.5) !important;
+  user-select: none !important;
+}
+
+.panel-header:hover {
+  background: rgba(241, 245, 249, 0.98) !important;
+  border-bottom-color: rgba(203, 213, 225, 0.7) !important;
+}
+
+.panel-header-content {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+.panel-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  color: #1e293b !important;
+  font-weight: 600 !important;
+  font-size: 0.95rem !important;
+  letter-spacing: -0.01em !important;
+}
+
+.panel-icon {
+  width: 18px !important;
+  height: 18px !important;
+  color: #667eea !important;
+}
+
+.collapse-toggle {
+  background: none !important;
+  border: none !important;
+  cursor: pointer !important;
+  padding: 4px !important;
+  border-radius: 6px !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.collapse-toggle:hover {
+  background: rgba(102, 126, 234, 0.1) !important;
+  transform: scale(1.1) !important;
+}
+
+.chevron-icon {
+  width: 16px !important;
+  height: 16px !important;
+  color: #667eea !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.panel-content {
+  padding: 20px !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  max-height: 500px !important;
+  overflow-y: auto !important;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  opacity: 1 !important;
+}
+
+.panel-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.panel-content::-webkit-scrollbar-track {
+  background: rgba(248, 250, 252, 0.5);
+  border-radius: 2px;
+}
+
+.panel-content::-webkit-scrollbar-thumb {
+  background: rgba(203, 213, 225, 0.7);
+  border-radius: 2px;
+}
+
+.panel-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.8);
+}
+
+/* Views Section Specific Styles */
+.views-controls {
+  margin-bottom: 16px !important;
+}
+
+.close-view-btn {
+  width: 100% !important;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+  color: white !important;
+  border: none !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  border-radius: 8px !important;
+  padding: 12px !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.close-view-btn:hover {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3) !important;
+}
+
+.views-table-container {
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+}
+
+/* Mobile Responsive Styles */
+.right-panels-toggler {
+  position: fixed !important;
+  top: 20px !important;
+  right: 20px !important;
+  z-index: 1001 !important;
+  width: 48px !important;
+  height: 48px !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px) !important;
+  border-radius: 50% !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
+  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+  display: none !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.right-panels-toggler:hover {
+  transform: scale(1.05) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2) !important;
+}
+
+@media (max-width: 768px) {
+  .right-panels-container {
+    position: fixed !important;
+    top: 0 !important;
+    right: -100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100vh !important;
+    border-radius: 0 !important;
+    transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    overflow-y: auto !important;
+  }
+
+  .right-panels-container.right-panels-visible {
+    right: 0 !important;
+  }
+
+  .right-panels-toggler {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .panels-content {
+    max-height: calc(100vh - 80px) !important;
+  }
+
+  .panel-content {
+    padding: 16px !important;
+  }
+}
+
+/* 2D Views Panel Styles - UNIFIED DESIGN */
+.views-panel {
+  position: fixed !important;
+  top: 5px !important;
+  left: 5px !important;
+  z-index: 1000 !important;
+  width: 260px !important;
+  max-width: 300px !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
+  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+
+.views-panel * {
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+
+.views-panel bim-panel-section {
+  padding: 16px !important;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+
+.views-panel bim-label {
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+  color: #1e293b !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em !important;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+
+/*.level-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1e293b;
+  letter-spacing: -0.01em;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+*/
+.views-panel bim-button {
+  margin: 4px 2px !important;
+  border-radius: 6px !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  background: rgba(248, 250, 252, 0.95) !important;
+  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+  color: #1e293b !important;
+  padding: 6px 12px !important;
+}
+
+.views-panel bim-button:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  background: rgba(241, 245, 249, 0.95) !important;
+  border-color: rgba(102, 126, 234, 0.3) !important;
+}
+
+.views-panel bim-table {
+  margin-top: 12px !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: 0.875rem !important;
+}
+
+.views-panel bim-table * {
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+
+.views-panel bim-table tr:hover {
+  background-color: rgba(102, 126, 234, 0.08) !important;
+}
+
+.views-panel bim-button[icon] {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 32px !important;
+  height: 32px !important;
+}
+
+.views-panel bim-button[label="Close Active 2D View"] {
+  width: 80% !important;
+  margin-bottom: 12px !important;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  border: none !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  border-radius: 100px!important;
+}
+
+.views-panel bim-button[label="Close Active 2D View"]:hover {
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46a8 100%) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  .views-panel {
+    position: fixed !important;
+    top: 0 !important;
+    left: -100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100vh !important;
+    border-radius: 0 !important;
+    transition: left 0.3s ease-in-out !important;
+    overflow-y: auto !important;
+    border-left: 1px solid rgba(226, 232, 240, 0.8) !important;
+  }
+
+  .views-panel.views-panel-visible {
+    left: 0 !important;
+  }
+
+  .views-menu-toggler {
+    position: fixed !important;
+    top: 20px !important;
+    left: 20px !important;
+    z-index: 1001 !important;
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 50% !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(10px) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
+    border: 1px solid rgba(226, 232, 240, 0.8) !important;
+    display: none !important;
+  }
+
+  .views-menu-toggler:hover {
+    transform: scale(1.05) !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2) !important;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .right-panels-container {
+    background: rgba(30, 41, 59, 0.98) !important;
+    border: 1px solid rgba(51, 65, 85, 0.8) !important;
+  }
+
+  .panel-header {
+    background: rgba(15, 23, 42, 0.95) !important;
+    border-bottom: 1px solid rgba(51, 65, 85, 0.5) !important;
+  }
+
+  .panel-header:hover {
+    background: rgba(30, 41, 59, 0.98) !important;
+  }
+
+  .panel-title {
+    color: #f1f5f9 !important;
+  }
+
+  .panel-content {
+    background: rgba(30, 41, 59, 0.95) !important;
+  }
+
+  .views-panel {
+    background: rgba(30, 41, 59, 0.95) !important;
+    border: 1px solid rgba(51, 65, 85, 0.8) !important;
+  }
+
+  .views-panel bim-label {
+    color: #cbd5e1 !important;
+  }
+
+  .views-panel bim-button {
+    background: rgba(15, 23, 42, 0.95) !important;
+    color: #f1f5f9 !important;
+    border: 1px solid rgba(51, 65, 85, 0.8) !important;
+  }
+
+  .views-panel bim-button:hover {
+    background: rgba(51, 65, 85, 0.95) !important;
+  }
+
+  .views-panel bim-table tr:hover {
+    background-color: rgba(102, 126, 234, 0.15) !important;
+  }
+
+  .views-menu-toggler {
+    background: rgba(30, 41, 59, 0.95) !important;
+    border: 1px solid rgba(51, 65, 85, 0.8) !important;
+  }
+
+  .right-panels-toggler {
+    background: rgba(30, 41, 59, 0.95) !important;
+    border: 1px solid rgba(51, 65, 85, 0.8) !important;
+  }
+}
+
+/* Animation effects */
+.views-panel {
+  animation: slideInFromLeft 0.3s ease-out;
+}
+
+@keyframes slideInFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ============================================================================
+   MODERN FILTER PANEL STYLES - UNIFIED DESIGN
+   ============================================================================ */
+
+.modern-filter-panel {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
+  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+  backdrop-filter: blur(10px) !important;
+  overflow: hidden !important;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+
+.modern-filter-panel * {
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+
+.modern-reset-section {
+  padding: 0 !important;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.reset-container {
+  padding: 1rem;
+  background: rgba(248, 250, 252, 0.95);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.reset-item {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: slideInUp 0.4s ease forwards;
+}
+
+.reset-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 8px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.reset-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  transform: scaleX(0);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: left;
+}
+
+.reset-content:hover {
+  background: rgba(241, 245, 249, 0.95);
+  border-color: rgba(203, 213, 225, 0.9);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+.reset-content:hover::before {
+  transform: scaleX(1);
+}
+
+.reset-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.reset-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1e293b;
+  letter-spacing: -0.01em;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+
+.reset-description {
+  font-size: 0.70rem;
+  font-weight: 500;
+  color: #667eea;
+  background: linear-gradient(135deg, #f0f4ff 0%, #e8efff 100%);
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  width: fit-content;
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+
+.modern-reset-btn {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.modern-reset-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46a8 100%);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 4px;
+}
+
+.reset-icon {
+  width: 18px;
+  height: 18px;
+  color: white;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
+  position: relative;
+}
+
+.modern-reset-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.modern-reset-btn:hover::before {
+  opacity: 1;
+}
+
+.modern-reset-btn:hover .reset-icon {
+  transform: rotate(180deg) scale(1.1);
+}
+
+.modern-reset-btn:active {
+  transform: scale(0.95);
+}
+
+.modern-reset-btn.loading {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.modern-reset-btn.loading .reset-icon {
+  animation: spin 1s linear infinite;
+}
+
+.modern-isolation-section {
+  padding: 0 !important;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.isolation-container {
+  padding: 1rem;
+  background: rgba(248, 250, 252, 0.95);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.level-item {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: slideInUp 0.4s ease forwards;
+  margin-bottom: 0.5rem;
+}
+
+.level-item:last-child {
+  margin-bottom: 0;
+}
+
+.level-item:last-child .level-divider {
+  display: none;
+}
+
+@keyframes slideInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.level-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 8px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.level-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  transform: scaleX(0);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: left;
+}
+
+.level-content:hover {
+  background: rgba(241, 245, 249, 0.95);
+  border-color: rgba(203, 213, 225, 0.9);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+.level-content:hover::before {
+  transform: scaleX(1);
+}
+
+.level-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.level-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1e293b;
+  letter-spacing: -0.01em;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+
+.level-badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #94a3b8;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  width: fit-content;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+
+.modern-checkbox {
+  position: relative;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.checkbox-input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  width: 0;
+  height: 0;
+}
+
+.checkbox-custom {
+  width: 24px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid rgba(203, 213, 225, 0.9);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.checkbox-custom::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 4px;
+}
+
+.checkbox-icon {
+  width: 14px;
+  height: 14px;
+  color: white;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
+  position: relative;
+}
+
+.modern-checkbox:hover .checkbox-custom {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  transform: scale(1.05);
+}
+
+.checkbox-input:checked + .checkbox-custom::before {
+  opacity: 1;
+}
+
+.checkbox-input:checked + .checkbox-custom {
+  border-color: #667eea;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.checkbox-input:checked + .checkbox-custom .checkbox-icon {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.checkbox-input:checked + .checkbox-custom {
+  animation: checkboxPulse 0.3s ease;
+}
+
+@keyframes checkboxPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.level-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(226, 232, 240, 0.8) 20%, rgba(226, 232, 240, 0.8) 80%, transparent 100%);
+  margin: 0.5rem 1rem 0 1rem;
+  opacity: 0.6;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .modern-filter-panel {
+    background: rgba(30, 41, 59, 0.95) !important;
+    border: 1px solid rgba(51, 65, 85, 0.8) !important;
+  }
+
+  .modern-reset-section {
+    background: rgba(30, 41, 59, 0.95);
+  }
+
+  .reset-container {
+    background: rgba(15, 23, 42, 0.95);
+  }
+
+  .reset-content {
+    background: rgba(30, 41, 59, 0.95);
+    border: 1px solid rgba(51, 65, 85, 0.8);
+  }
+
+  .reset-content:hover {
+    background: rgba(51, 65, 85, 0.95);
+    border-color: rgba(71, 85, 105, 0.9);
+  }
+
+  .reset-title {
+    color: #f1f5f9;
+  }
+
+  .reset-description {
+    color: #cbd5e1;
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    border: 1px solid rgba(102, 126, 234, 0.3);
+  }
+
+  .modern-isolation-section {
+    background: rgba(30, 41, 59, 0.95);
+  }
+
+  .isolation-container {
+    background: rgba(15, 23, 42, 0.95);
+  }
+
+  .level-content {
+    background: rgba(30, 41, 59, 0.95);
+    border: 1px solid rgba(51, 65, 85, 0.8);
+  }
+
+  .level-content:hover {
+    background: rgba(51, 65, 85, 0.95);
+    border-color: rgba(71, 85, 105, 0.9);
+  }
+
+  .level-name {
+    color: #f1f5f9;
+  }
+
+  .level-badge {
+    color: #94a3b8;
+    border: 1px solid rgba(51, 65, 85, 0.8);
+  }
+
+  .checkbox-custom {
+    background: rgba(30, 41, 59, 0.95);
+    border: 2px solid rgba(71, 85, 105, 0.9);
+  }
+
+  .level-divider {
+    background: linear-gradient(90deg, transparent 0%, rgba(51, 65, 85, 0.8) 20%, rgba(51, 65, 85, 0.8) 80%, transparent 100%);
+  }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 480px) {
+  .isolation-container {
+    padding: 0.75rem;
+  }
+  
+  .level-content {
+    padding: 0.75rem;
+  }
+  
+  .level-name {
+    font-size: 0.875rem;
+  }
+  
+  .level-badge {
+    font-size: 0.70rem;
+    padding: 0.1rem 0.4rem;
+  }
+  
+  .checkbox-custom {
+    width: 22px;
+    height: 22px;
+  }
+  
+  .checkbox-icon {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+/* Smooth transitions for better UX */
+.level-item:hover .level-badge {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  transform: scale(1.05);
+}
+
+/* Loading state styling */
+.level-content.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Focus states for accessibility */
+.checkbox-input:focus + .checkbox-custom {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
+}
+
+/* Adjust font size for categories in the filter */
+.category-checkbox label {
+  font-size: 12px; /* Reduced font size */
+}
+
