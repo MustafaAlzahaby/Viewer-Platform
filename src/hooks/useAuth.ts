@@ -139,7 +139,10 @@ export function useAuth() {
 
   const fetchProfile = async (userId: string) => {
     try {
-      if (!supabase) return
+      if (!supabase) {
+        console.log('[Auth] Demo mode - skipping profile fetch')
+        return
+      }
 
       const { data, error } = await supabase
         .from('user_profiles')
@@ -154,30 +157,37 @@ export function useAuth() {
       }
 
       if (error) {
-        console.error('[Auth] fetchProfile error:', error)
+        console.warn('[Auth] fetchProfile error (possibly network/config issue):', error.message)
         setProfile(null)
+        setLoading(false)
         return
       }
 
       if (!data) {
         console.warn('[Auth] No profile row found; proceeding without profile')
         setProfile(null)
+        setLoading(false)
         return
       }
 
       if (!data.is_active) {
         console.warn('[Auth] User deactivated — signing out')
-        await supabase.auth.signOut()
+        try {
+          await supabase.auth.signOut()
+        } catch (signOutError) {
+          console.error('[Auth] Error signing out deactivated user:', signOutError)
+        }
         setUser(null)
         setProfile(null)
         currentUserIdRef.current = null
+        setLoading(false)
         return
       }
 
       setProfile(data)
       console.log(`[Auth] Profile loaded for user: ${data.full_name} (Role: ${data.role})`)
     } catch (e) {
-      console.error('[Auth] fetchProfile unexpected error:', e)
+      console.warn('[Auth] fetchProfile network/connection error:', e instanceof Error ? e.message : 'Unknown error')
       setProfile(null)
     } finally {
       // only clear loading if this profile belongs to the current user

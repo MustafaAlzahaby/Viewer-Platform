@@ -16,10 +16,12 @@ import {
   AlertTriangle,
   X
 } from 'lucide-react'
+import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import type { UserProfile, Project } from '../lib/supabase'
 
 export function AdminPanel() {
+  const { profile, loading: authLoading } = useAuth()
   const [users, setUsers] = useState<UserProfile[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
@@ -42,20 +44,64 @@ export function AdminPanel() {
 
   const fetchData = async () => {
     try {
-      const [usersResponse, projectsResponse] = await Promise.all([
-        supabase.from('user_profiles').select('*').order('created_at', { ascending: false }),
-        supabase.from('projects').select('*').order('created_at', { ascending: false })
-      ])
+      if (supabase) {
+        const [usersResponse, projectsResponse] = await Promise.all([
+          supabase.from('user_profiles').select('*').order('created_at', { ascending: false }),
+          supabase.from('projects').select('*').order('created_at', { ascending: false })
+        ])
 
-      if (usersResponse.error) {
-        console.error('Error fetching users:', usersResponse.error)
-      }
-      if (projectsResponse.error) {
-        console.error('Error fetching projects:', projectsResponse.error)
-      }
+        if (usersResponse.error) {
+          console.error('Error fetching users:', usersResponse.error)
+        }
+        if (projectsResponse.error) {
+          console.error('Error fetching projects:', projectsResponse.error)
+        }
 
-      setUsers(usersResponse.data || [])
-      setProjects(projectsResponse.data || [])
+        setUsers(usersResponse.data || [])
+        setProjects(projectsResponse.data || [])
+      } else {
+        // Demo mode - set demo data
+        setUsers([
+          {
+            id: 'demo-admin',
+            email: 'admin@construction.com',
+            full_name: 'System Administrator',
+            role: 'admin',
+            company: 'Construction Co.',
+            position: 'Administrator',
+            avatar_url: null,
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          },
+          {
+            id: 'demo-user-1',
+            email: 'john.doe@company.com',
+            full_name: 'John Doe',
+            role: 'viewer',
+            company: 'ABC Construction',
+            position: 'Project Manager',
+            avatar_url: null,
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+        ])
+        setProjects([
+          {
+            id: 'demo-project',
+            name: 'MOC Building Model',
+            description: 'Demo construction project with real-time progress monitoring',
+            model_url: '/models/z06.frag',
+            excel_url: '/excel-sheet/data.xlsx',
+            baseline_data: null,
+            created_by: 'demo-admin',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            is_active: true
+          }
+        ])
+      }
     } catch (error) {
       console.error('Error fetching data:', error)
       // Set demo data for development
@@ -106,12 +152,14 @@ export function AdminPanel() {
 
   const updateUserRole = async (userId: string, newRole: 'viewer' | 'uploader' | 'admin') => {
     try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ role: newRole })
-        .eq('id', userId)
+      if (supabase) {
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({ role: newRole })
+          .eq('id', userId)
 
-      if (error) throw error
+        if (error) throw error
+      }
       
       setUsers(users.map(user => 
         user.id === userId ? { ...user, role: newRole } : user
@@ -127,12 +175,14 @@ export function AdminPanel() {
 
   const toggleUserStatus = async (userId: string, isActive: boolean) => {
     try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ is_active: !isActive })
-        .eq('id', userId)
+      if (supabase) {
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({ is_active: !isActive })
+          .eq('id', userId)
 
-      if (error) throw error
+        if (error) throw error
+      }
       
       setUsers(users.map(user => 
         user.id === userId ? { ...user, is_active: !isActive } : user
@@ -153,12 +203,14 @@ export function AdminPanel() {
     }
 
     try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .delete()
-        .eq('id', userId)
+      if (supabase) {
+        const { error } = await supabase
+          .from('user_profiles')
+          .delete()
+          .eq('id', userId)
 
-      if (error) throw error
+        if (error) throw error
+      }
       
       setUsers(users.filter(user => user.id !== userId))
     } catch (error) {
@@ -342,7 +394,7 @@ export function AdminPanel() {
     }
   }
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 flex items-center justify-center">
         <div className="text-center">
