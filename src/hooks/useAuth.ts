@@ -18,6 +18,43 @@ export function useAuth() {
   // Track the *current* authenticated user id to avoid stale setState
   const currentUserIdRef = useRef<string | null>(null)
   const safetyTimeoutRef = useRef<number | null>(null)
+  const sessionTimeoutRef = useRef<number | null>(null)
+
+  // Session timeout duration (20 minutes)
+  const SESSION_TIMEOUT = 20 * 60 * 1000 // 20 minutes in milliseconds
+
+  // Reset session timeout
+  const resetSessionTimeout = () => {
+    if (sessionTimeoutRef.current) {
+      clearTimeout(sessionTimeoutRef.current)
+    }
+    
+    if (user && !demoMode) {
+      sessionTimeoutRef.current = window.setTimeout(() => {
+        console.log('[Auth] Session timeout - signing out')
+        signOut()
+      }, SESSION_TIMEOUT)
+    }
+  }
+
+  // Activity listeners to reset timeout
+  useEffect(() => {
+    const resetTimeout = () => resetSessionTimeout()
+    
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click']
+    events.forEach(event => {
+      document.addEventListener(event, resetTimeout, true)
+    })
+
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, resetTimeout, true)
+      })
+      if (sessionTimeoutRef.current) {
+        clearTimeout(sessionTimeoutRef.current)
+      }
+    }
+  }, [user, demoMode])
 
   useEffect(() => {
     // Safety: never allow infinite loading in dev
@@ -58,6 +95,7 @@ export function useAuth() {
 
         if (nextUser) {
           await fetchProfile(nextUser.id)
+          resetSessionTimeout()
         } else {
           finish()
         }
@@ -71,8 +109,13 @@ export function useAuth() {
 
             if (u) {
               await fetchProfile(u.id)
+              resetSessionTimeout()
             } else {
               setProfile(null)
+              if (sessionTimeoutRef.current) {
+                clearTimeout(sessionTimeoutRef.current)
+                sessionTimeoutRef.current = null
+              }
               finish()
             }
           }
@@ -90,6 +133,7 @@ export function useAuth() {
       unsubscribed = true
       try { sub?.unsubscribe?.() } catch {}
       if (safetyTimeoutRef.current) window.clearTimeout(safetyTimeoutRef.current)
+      if (sessionTimeoutRef.current) clearTimeout(sessionTimeoutRef.current)
     }
   }, [])
 
@@ -172,6 +216,7 @@ export function useAuth() {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
+        resetSessionTimeout()
         return { data: { user: demoUser, session: null }, error: null }
       }
       return { data: { user: null, session: null }, error: new Error('Invalid credentials') }
@@ -200,6 +245,7 @@ export function useAuth() {
 
       if (authedUser?.id) {
         await fetchProfile(authedUser.id) // awaited to prevent race with old user
+        resetSessionTimeout()
       } else {
         setProfile(null)
         setLoading(false)
@@ -259,6 +305,12 @@ export function useAuth() {
   }
 
   const signOut = async () => {
+    // Clear session timeout
+    if (sessionTimeoutRef.current) {
+      clearTimeout(sessionTimeoutRef.current)
+      sessionTimeoutRef.current = null
+    }
+
     if (!supabase) {
       setUser(null)
       setProfile(null)
@@ -325,5 +377,7 @@ export function useAuth() {
     // User status
     isActive: profile?.is_active === true,
     userRole: profile?.role || null
+    // Session management
+    resetSessionTimeout
   }
 }

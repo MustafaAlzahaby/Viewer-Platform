@@ -45,6 +45,7 @@
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.1",
     "stats.js": "^0.17.0",
-    "supabase": "^2.47.2"
+    "supabase": "^2.47.2",
+    "xlsx": "^0.18.5"
   }
 }

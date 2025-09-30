@@ -65,8 +65,15 @@ function App() {
   const handleAuthSuccess = () => {
     console.log('[Auth] Success → closing modal & routing')
     setShowAuthModal(false)
-    // Route conservatively to dashboard; admins can jump to Admin via FAB or header
-    setAppState(profile?.role === 'admin' ? 'admin' : 'dashboard')
+    
+    // Wait for profile to be loaded before routing
+    setTimeout(() => {
+      if (profile?.role === 'admin') {
+        setAppState('admin')
+      } else {
+        setAppState('dashboard')
+      }
+    }, 100)
   }
 
   console.log('Rendering app state:', appState)
@@ -89,12 +96,16 @@ function App() {
       break
 
     case 'admin':
-      content = profile?.role === 'admin'
-        ? (
+      // Only show admin panel if user is actually an admin
+      if (profile?.role === 'admin') {
+        content = (
           <div>
             <AdminPanel />
             <button
-              onClick={() => setAppState('dashboard')}
+              onClick={() => {
+                console.log('[App] Admin → Dashboard transition, current profile:', profile)
+                setAppState('dashboard')
+              }}
               className="fixed bottom-6 right-6 bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-full shadow-lg transition-colors"
               title="Go to Dashboard"
             >
@@ -105,16 +116,34 @@ function App() {
             </button>
           </div>
         )
-        : (
+      } else {
+        // If not admin, redirect to dashboard
+        console.log('[App] Non-admin trying to access admin panel, redirecting to dashboard')
+        setAppState('dashboard')
+        content = (
           <Dashboard
             onOpenViewer={handleOpenViewer}
             onOpenBaseline={handleOpenBaseline}
             onBackToHome={handleBackToLanding}
           />
         )
+      }
       break
 
     case 'dashboard':
+      // Ensure we have a valid user and profile before showing dashboard
+      if (!user || !profile) {
+        console.log('[App] No user/profile in dashboard state, redirecting to landing')
+        setAppState('landing')
+        content = (
+          <LandingPage
+            onGetStarted={handleGetStarted}
+            onAboutUs={handleAboutUs}
+          />
+        )
+        break
+      }
+
       content = (
         <div>
           <Dashboard
@@ -124,7 +153,10 @@ function App() {
           />
           {profile?.role === 'admin' && (
             <button
-              onClick={() => setAppState('admin')}
+              onClick={() => {
+                console.log('[App] Dashboard → Admin transition, current profile:', profile)
+                setAppState('admin')
+              }}
               className="fixed bottom-6 right-6 bg-yellow-500 hover:bg-yellow-600 text-white p-3 rounded-full shadow-lg transition-colors"
               title="Admin Panel"
             >
