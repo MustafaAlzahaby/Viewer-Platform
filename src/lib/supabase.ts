@@ -9,7 +9,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = (supabaseUrl && supabaseAnonKey)
   ? createClient(supabaseUrl, supabaseAnonKey)
-  : null as unknown as ReturnType<typeof createClient> // tricks TS but be sure you set env vars in prod
+  : null
 
 // Types
 export interface UserProfile {
