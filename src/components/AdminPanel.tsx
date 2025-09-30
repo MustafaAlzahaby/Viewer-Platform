@@ -1,21 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { 
-  Users, 
-  Shield, 
-  Building2, 
-  Settings, 
-  UserCheck, 
-  UserX,
-  Crown,
-  Eye,
-  Upload,
-  Trash2,
-  Plus,
-  Edit,
-  AlertTriangle,
-  X
-} from 'lucide-react'
+import { Users, Shield, Building2, Settings, UserCheck, UserX, Crown, Eye, Upload, Trash2, Plus, CreditCard as Edit, TriangleAlert as AlertTriangle, X } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import type { UserProfile, Project } from '../lib/supabase'
