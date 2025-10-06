@@ -1,25 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { 
-  Users, 
-  Shield, 
-  Building2, 
-  Settings, 
-  UserCheck, 
-  UserX,
-  Crown,
-  Eye,
-  Upload,
-  Trash2,
-  Plus,
-  Edit,
-  AlertTriangle,
-  X
-} from 'lucide-react'
+import { Users, Shield, Building2, Settings, UserCheck, UserX, Crown, Eye, Upload, Trash2, Plus, CreditCard as Edit, TriangleAlert as AlertTriangle, X } from 'lucide-react'
+import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import type { UserProfile, Project } from '../lib/supabase'
 
 export function AdminPanel() {
+  const { profile, loading: authLoading } = useAuth()
   const [users, setUsers] = useState<UserProfile[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
@@ -42,20 +29,64 @@ export function AdminPanel() {
 
   const fetchData = async () => {
     try {
-      const [usersResponse, projectsResponse] = await Promise.all([
-        supabase.from('user_profiles').select('*').order('created_at', { ascending: false }),
-        supabase.from('projects').select('*').order('created_at', { ascending: false })
-      ])
+      if (supabase) {
+        const [usersResponse, projectsResponse] = await Promise.all([
+          supabase.from('user_profiles').select('*').order('created_at', { ascending: false }),
+          supabase.from('projects').select('*').order('created_at', { ascending: false })
+        ])
 
-      if (usersResponse.error) {
-        console.error('Error fetching users:', usersResponse.error)
-      }
-      if (projectsResponse.error) {
-        console.error('Error fetching projects:', projectsResponse.error)
-      }
+        if (usersResponse.error) {
+          console.error('Error fetching users:', usersResponse.error)
+        }
+        if (projectsResponse.error) {
+          console.error('Error fetching projects:', projectsResponse.error)
+        }
 
-      setUsers(usersResponse.data || [])
-      setProjects(projectsResponse.data || [])
+        setUsers(usersResponse.data || [])
+        setProjects(projectsResponse.data || [])
+      } else {
+        // Demo mode - set demo data
+        setUsers([
+          {
+            id: 'demo-admin',
+            email: 'admin@construction.com',
+            full_name: 'System Administrator',
+            role: 'admin',
+            company: 'Construction Co.',
+            position: 'Administrator',
+            avatar_url: null,
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          },
+          {
+            id: 'demo-user-1',
+            email: 'john.doe@company.com',
+            full_name: 'John Doe',
+            role: 'viewer',
+            company: 'ABC Construction',
+            position: 'Project Manager',
+            avatar_url: null,
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+        ])
+        setProjects([
+          {
+            id: 'demo-project',
+            name: 'MOC Building Model',
+            description: 'Demo construction project with real-time progress monitoring',
+            model_url: '/models/z06.frag',
+            excel_url: '/excel-sheet/data.xlsx',
+            baseline_data: null,
+            created_by: 'demo-admin',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            is_active: true
+          }
+        ])
+      }
     } catch (error) {
       console.error('Error fetching data:', error)
       // Set demo data for development
@@ -106,12 +137,14 @@ export function AdminPanel() {
 
   const updateUserRole = async (userId: string, newRole: 'viewer' | 'uploader' | 'admin') => {
     try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ role: newRole })
-        .eq('id', userId)
+      if (supabase) {
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({ role: newRole })
+          .eq('id', userId)
 
-      if (error) throw error
+        if (error) throw error
+      }
       
       setUsers(users.map(user => 
         user.id === userId ? { ...user, role: newRole } : user
@@ -127,12 +160,14 @@ export function AdminPanel() {
 
   const toggleUserStatus = async (userId: string, isActive: boolean) => {
     try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ is_active: !isActive })
-        .eq('id', userId)
+      if (supabase) {
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({ is_active: !isActive })
+          .eq('id', userId)
 
-      if (error) throw error
+        if (error) throw error
+      }
       
       setUsers(users.map(user => 
         user.id === userId ? { ...user, is_active: !isActive } : user
@@ -153,12 +188,14 @@ export function AdminPanel() {
     }
 
     try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .delete()
-        .eq('id', userId)
+      if (supabase) {
+        const { error } = await supabase
+          .from('user_profiles')
+          .delete()
+          .eq('id', userId)
 
-      if (error) throw error
+        if (error) throw error
+      }
       
       setUsers(users.filter(user => user.id !== userId))
     } catch (error) {
@@ -177,7 +214,7 @@ export function AdminPanel() {
     }
     
     try {
-      if (supabase) {
+      if (supabase && profile?.id) {
         const { data, error } = await supabase
           .from('projects')
           .insert({
@@ -185,7 +222,8 @@ export function AdminPanel() {
             description: newProject.description,
             model_url: newProject.model_url || null,
             excel_url: newProject.excel_url || null,
-            created_by: 'demo-admin' // In real app, use current user ID
+            created_by: profile.id,
+            is_active: true
           })
           .select()
           .single()
@@ -201,7 +239,7 @@ export function AdminPanel() {
           model_url: newProject.model_url || null,
           excel_url: newProject.excel_url || null,
           baseline_data: null,
-          created_by: 'demo-admin',
+          created_by: profile?.id || 'demo-admin',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           is_active: true
@@ -213,6 +251,7 @@ export function AdminPanel() {
       setShowAddProject(false)
     } catch (error) {
       console.error('Error adding project:', error)
+      alert('Failed to add project: ' + (error as Error).message)
     }
   }
 
@@ -252,23 +291,25 @@ export function AdminPanel() {
       setEditingProject(null)
     } catch (error) {
       console.error('Error updating project:', error)
+      alert('Failed to update project: ' + (error as Error).message)
     }
   }
 
   const deleteProject = async (projectId: string) => {
     try {
-      const { error } = await supabase
-        .from('projects')
-        .delete()
-        .eq('id', projectId)
+      if (supabase) {
+        const { error } = await supabase
+          .from('projects')
+          .delete()
+          .eq('id', projectId)
 
-      if (error) throw error
+        if (error) throw error
+      }
       
       setProjects(projects.filter(project => project.id !== projectId))
     } catch (error) {
       console.error('Error deleting project:', error)
-      // For demo mode, still remove from local state
-      setProjects(projects.filter(project => project.id !== projectId))
+      alert('Failed to delete project: ' + (error as Error).message)
     }
   }
 
@@ -297,22 +338,28 @@ export function AdminPanel() {
 
   const toggleProjectStatus = async (projectId: string, isActive: boolean) => {
     try {
-      const { error } = await supabase
-        .from('projects')
-        .update({ is_active: !isActive })
-        .eq('id', projectId)
+      if (supabase) {
+        const { error } = await supabase
+          .from('projects')
+          .update({ is_active: !isActive, updated_at: new Date().toISOString() })
+          .eq('id', projectId)
+          .select()
+          .single()
 
-      if (error) throw error
-      
-      setProjects(projects.map(project => 
-        project.id === projectId ? { ...project, is_active: !isActive } : project
-      ))
+        if (error) throw error
+        
+        setProjects(projects.map(project => 
+          project.id === projectId ? { ...project, is_active: !isActive } : project
+        ))
+      } else {
+        // Demo mode
+        setProjects(projects.map(project => 
+          project.id === projectId ? { ...project, is_active: !isActive } : project
+        ))
+      }
     } catch (error) {
       console.error('Error updating project status:', error)
-      // For demo mode, still update local state
-      setProjects(projects.map(project => 
-        project.id === projectId ? { ...project, is_active: !isActive } : project
-      ))
+      alert('Failed to update project status: ' + (error as Error).message)
     }
   }
 
@@ -332,12 +379,29 @@ export function AdminPanel() {
     }
   }
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-red-500/30 border-t-red-500 rounded-full animate-spin mx-auto mb-4" />
           <p className="text-gray-800 text-lg">Loading admin panel...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Check if user is actually an admin
+  if (!profile || profile.role !== 'admin') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-gray-600">You don't have permission to access the admin panel.</p>
         </div>
       </div>
     )
@@ -357,7 +421,10 @@ export function AdminPanel() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
               <Shield className="w-8 h-8 text-red-600" />
-              <h1 className="text-xl font-bold text-gray-900">Admin Panel</h1>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">Admin Panel</h1>
+                <p className="text-sm text-gray-600">Welcome, {profile.full_name}</p>
+              </div>
             </div>
             
             <div className="flex items-center gap-2">
