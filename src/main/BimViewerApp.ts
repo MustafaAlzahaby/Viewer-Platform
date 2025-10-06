@@ -8,6 +8,19 @@ import { ViewsManager } from "../core/ViewsManager";
 import { RightPanelsContainer } from "../core/RightPanelsContainer";
 import { DetailsWindow } from "../core/DetailsWindow";
 
+interface ProjectData {
+  id: string;
+  name: string;
+  description?: string;
+  model_url?: string;
+  excel_url?: string;
+  baseline_data?: any;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  is_active: boolean;
+}
+
 export class BimViewerApp {
   private sceneManager: SceneManager;
   private modelManager!: ModelManager;
@@ -17,6 +30,7 @@ export class BimViewerApp {
   private viewsManager!: ViewsManager;
   private rightPanelsContainer!: RightPanelsContainer;
   private detailsWindow!: DetailsWindow;
+  private projectData: ProjectData | null;
 
   private projectName: string;
 
@@ -45,6 +59,8 @@ export class BimViewerApp {
       this.modelManager.fragmentManager
     );
 
+    // ✅ Initialize highlight controller AFTER fragments are ready
+    console.log("[BimViewerApp] Initializing HighlightController...");
     this.controller = new HighlightController(this.modelManager, this.hider);
 
     // ✅ Use static paths for shared files
@@ -59,6 +75,7 @@ export class BimViewerApp {
     this.rightPanelsContainer = new RightPanelsContainer(this.hider, this.viewsManager);
     this.rightPanelsContainer.initialize();
 
+    console.log("[BimViewerApp] Loading Excel panel from:", excelUrl);
     this.excelPanel = new ExcelDataPanel("container");
     await this.excelPanel.loadExcelData(
       excelPath,
@@ -68,6 +85,7 @@ export class BimViewerApp {
 
     this.excelPanel.addSearchBox();
     this.setupExcelIntegration();
+    console.log("[BimViewerApp] Excel panel ready");
 
     this.detailsWindow = new DetailsWindow(
       this.sceneManager,

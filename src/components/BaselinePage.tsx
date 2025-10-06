@@ -10,7 +10,7 @@ import {
   flexRender,
   ColumnDef
 } from '@tanstack/react-table'
-import { Button } from '@/components/ui/button' // shadcn button
+import { Button } from '../components/ui/button'
 
 interface BaselinePageProps {
   project: Project
