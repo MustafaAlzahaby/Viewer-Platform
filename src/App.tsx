@@ -36,6 +36,8 @@ function App() {
   // Actions
   const handleOpenViewer = async (project: Project) => {
     setSelectedProject(project)
+    // Store project data in sessionStorage so the viewer can access it
+    sessionStorage.setItem('currentProject', JSON.stringify(project))
     window.open('/viewer.html', '_blank')
   }
 

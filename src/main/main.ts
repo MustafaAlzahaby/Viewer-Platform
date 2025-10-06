@@ -3,21 +3,50 @@ import { BimViewerApp } from "./BimViewerApp";
 const CONTAINER_ID = "container";
 let bimApp: BimViewerApp | null = null;
 
+interface ProjectData {
+  id: string;
+  name: string;
+  description?: string;
+  model_url?: string;
+  excel_url?: string;
+  baseline_data?: any;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  is_active: boolean;
+}
+
 // Initialize the application
 async function initializeApp(): Promise<void> {
   try {
     console.log("Initializing BIM Viewer...");
 
+    // Check if project data was passed from the dashboard
+    const projectDataString = sessionStorage.getItem('currentProject');
+    let projectData: ProjectData | null = null;
+
+    if (projectDataString) {
+      try {
+        projectData = JSON.parse(projectDataString);
+        console.log("Project data found:", projectData);
+        // Clear it so it doesn't persist
+        sessionStorage.removeItem('currentProject');
+      } catch (error) {
+        console.error("Failed to parse project data:", error);
+      }
+    } else {
+      console.warn("No project data found in sessionStorage - using default paths");
+    }
 
     const containerElement = document.getElementById(CONTAINER_ID);
     if (!containerElement) {
       console.error("Container element not found");
     } else {
       console.log("Container found, initializing BIM Viewer...");
-    } 
+    }
 
-    // Create the BIM viewer app instance
-    bimApp = await BimViewerApp.create(CONTAINER_ID);
+    // Create the BIM viewer app instance with project data
+    bimApp = await BimViewerApp.create(CONTAINER_ID, projectData);
 
     // Make app globally available for debugging and external access
     (window as any).bimApp = bimApp;

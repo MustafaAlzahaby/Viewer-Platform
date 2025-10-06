@@ -8,6 +8,19 @@ import { ViewsManager } from "../core/ViewsManager";
 import { RightPanelsContainer } from "../core/RightPanelsContainer";
 import { DetailsWindow } from "../core/DetailsWindow";
 
+interface ProjectData {
+  id: string;
+  name: string;
+  description?: string;
+  model_url?: string;
+  excel_url?: string;
+  baseline_data?: any;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  is_active: boolean;
+}
+
 export class BimViewerApp {
   private sceneManager: SceneManager;
   private modelManager!: ModelManager;
@@ -17,19 +30,34 @@ export class BimViewerApp {
   private viewsManager!: ViewsManager;
   private rightPanelsContainer!: RightPanelsContainer;
   private detailsWindow!: DetailsWindow;
+  private projectData: ProjectData | null;
 
-  constructor(containerId: string) {
+  constructor(containerId: string, projectData: ProjectData | null = null) {
     this.sceneManager = new SceneManager(containerId);
+    this.projectData = projectData;
   }
 
-  public static async create(containerId: string): Promise<BimViewerApp> {
-    const app = new BimViewerApp(containerId);
+  public static async create(containerId: string, projectData: ProjectData | null = null): Promise<BimViewerApp> {
+    const app = new BimViewerApp(containerId, projectData);
     await app.initialize();
     return app;
   }
 
     private async initialize(): Promise<void> {
     console.log("[BimViewerApp] Starting initialization...");
+
+    if (this.projectData) {
+      console.log("[BimViewerApp] Loading project:", this.projectData.name);
+    } else {
+      console.log("[BimViewerApp] No project data - using default paths");
+    }
+
+    // Determine paths based on project data or use defaults
+    const excelUrl = this.projectData?.excel_url || "./excel-sheet/data.xlsx";
+    const configUrl = "./config.json";
+    const guidsUrl = "./guids/guids.json";
+
+    console.log("[BimViewerApp] Excel URL:", excelUrl);
 
     // Initialize core components
     this.modelManager = await ModelManager.create(this.sceneManager.world, this.sceneManager.components);
@@ -74,8 +102,8 @@ export class BimViewerApp {
     console.log("[BimViewerApp] Initializing HighlightController...");
     this.controller = new HighlightController(this.modelManager, this.hider);
 
-    console.log("[BimViewerApp] Loading config and data...");
-    await this.controller.initialize("./config.json", "./excel-sheet/data.xlsx", "./guids/guids.json");
+    console.log("[BimViewerApp] Loading config and data from:", excelUrl);
+    await this.controller.initialize(configUrl, excelUrl, guidsUrl);
 
     console.log("[BimViewerApp] Refreshing processed data...");
     await this.controller.refreshProcessedData();
@@ -89,9 +117,9 @@ export class BimViewerApp {
     this.rightPanelsContainer = new RightPanelsContainer(this.hider, this.viewsManager);
     this.rightPanelsContainer.initialize();
 
-    console.log("[BimViewerApp] Loading Excel panel...");
+    console.log("[BimViewerApp] Loading Excel panel from:", excelUrl);
     this.excelPanel = new ExcelDataPanel("container");
-    await this.excelPanel.loadExcelData("./excel-sheet/data.xlsx", "Activity Name", "Performance % Complete");
+    await this.excelPanel.loadExcelData(excelUrl, "Activity Name", "Performance % Complete");
     this.excelPanel.addSearchBox();
     this.setupExcelIntegration();
     console.log("[BimViewerApp] Excel panel ready");

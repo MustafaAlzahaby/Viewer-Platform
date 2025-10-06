@@ -242,13 +242,23 @@ export class ExcelDataPanel {
     columnCName: string = "Finish" // New parameter for third column
   ): Promise<void> {
     try {
+      console.log("[ExcelDataPanel] Loading Excel data from:", filePath);
+
       // Show loading state
       const panel = document.getElementById("excel-data-panel");
       if (panel) panel.classList.add("loading");
 
       // Fetch the Excel file
+      console.log("[ExcelDataPanel] Fetching file...");
       const response = await fetch(filePath);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch Excel file: ${response.status} ${response.statusText}`);
+      }
+
+      console.log("[ExcelDataPanel] File fetched, parsing...");
       const arrayBuffer = await response.arrayBuffer();
+      console.log("[ExcelDataPanel] File size:", (arrayBuffer.byteLength / 1024).toFixed(2), "KB");
 
       // Parse Excel file
       const workbook = XLSX.read(arrayBuffer, { type: "array" });
@@ -259,12 +269,16 @@ export class ExcelDataPanel {
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
       if (jsonData.length === 0) {
-        // console.error("No data found in Excel file");
-        return;
+        console.error("[ExcelDataPanel] No data found in Excel file");
+        throw new Error("Excel file is empty");
       }
+
+      console.log("[ExcelDataPanel] Total rows:", jsonData.length);
 
       // Get headers (first row)
       const headers = jsonData[0] as string[];
+      console.log("[ExcelDataPanel] Headers:", headers);
+
       const columnAIndex = headers.findIndex((header) =>
         header.toLowerCase().includes(columnAName.toLowerCase())
       );
@@ -275,8 +289,20 @@ export class ExcelDataPanel {
         header.toLowerCase().includes(columnCName.toLowerCase())
       );
 
+      console.log("[ExcelDataPanel] Column indices:", {
+        columnA: columnAIndex,
+        columnB: columnBIndex,
+        columnC: columnCIndex
+      });
+
       if (columnAIndex === -1 || columnBIndex === -1 || columnCIndex === -1) {
-        return;
+        console.error("[ExcelDataPanel] Required columns not found:", {
+          needColumnA: columnAName,
+          needColumnB: columnBName,
+          needColumnC: columnCName,
+          foundHeaders: headers
+        });
+        throw new Error(`Required columns not found in Excel file`);
       }
 
       // Extract data rows
@@ -298,15 +324,19 @@ export class ExcelDataPanel {
           });
         }
       }
-      // Inside loadExcelData method, right after pushing data to this.data
-      console.log("Loaded Excel Data:", this.data);  // Log loaded data
+      console.log(`[ExcelDataPanel] Loaded ${this.data.length} rows of data`);
+      console.log("[ExcelDataPanel] First 3 rows:", this.data.slice(0, 3));
 
       this.columnA = columnAName;
       this.columnB = columnBName;
       this.columnC = columnCName;
+
+      console.log("[ExcelDataPanel] Rendering table...");
       this.renderTable();
+      console.log("[ExcelDataPanel] Excel data loaded successfully!");
     } catch (error) {
-      console.error("Error loading Excel data:", error);
+      console.error("[ExcelDataPanel] Error loading Excel data:", error);
+      throw error; // Re-throw to let caller know about the error
     } finally {
       // Remove loading state 
       const panel = document.getElementById("excel-data-panel");
