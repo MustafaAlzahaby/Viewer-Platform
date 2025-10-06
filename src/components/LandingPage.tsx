@@ -249,6 +249,7 @@ export function LandingPage({ onGetStarted, onAboutUs }: LandingPageProps) {
                 <Eye className="w-5 h-5" />
                 View Demo
               </motion.button>
+
             </motion.div>
 
             {/* Stats */}

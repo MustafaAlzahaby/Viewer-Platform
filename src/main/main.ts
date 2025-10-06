@@ -8,6 +8,14 @@ async function initializeApp(): Promise<void> {
   try {
     console.log("Initializing BIM Viewer...");
 
+
+    const containerElement = document.getElementById(CONTAINER_ID);
+    if (!containerElement) {
+      console.error("Container element not found");
+    } else {
+      console.log("Container found, initializing BIM Viewer...");
+    } 
+
     // Create the BIM viewer app instance
     bimApp = await BimViewerApp.create(CONTAINER_ID);
 
@@ -46,9 +54,15 @@ window.addEventListener("beforeunload", () => {
   }
 });
 
-// Start the application when the DOM is ready
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initializeApp);
-} else {
-  initializeApp();
+function delayedInitializeApp() {
+  setTimeout(() => {
+    initializeApp();
+  }, 1000); // 1 second delay to let files load
 }
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", delayedInitializeApp);
+} else {
+  delayedInitializeApp();
+}
+

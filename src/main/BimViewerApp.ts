@@ -6,6 +6,7 @@ import { SceneManager } from "../core/SceneManager";
 import { ExcelDataPanel } from "../core/ExcelDataPanel";
 import { ViewsManager } from "../core/ViewsManager";
 import { RightPanelsContainer } from "../core/RightPanelsContainer";
+import { DetailsWindow } from "../core/DetailsWindow";
 
 export class BimViewerApp {
   private sceneManager: SceneManager;
@@ -15,6 +16,7 @@ export class BimViewerApp {
   private controller!: HighlightController;
   private viewsManager!: ViewsManager;
   private rightPanelsContainer!: RightPanelsContainer;
+  private detailsWindow!: DetailsWindow;
 
   constructor(containerId: string) {
     this.sceneManager = new SceneManager(containerId);
@@ -26,50 +28,46 @@ export class BimViewerApp {
     return app;
   }
 
-  private async initialize(): Promise<void> {
+    private async initialize(): Promise<void> {
     // Initialize core components
-    this.modelManager = await ModelManager.create(
-      this.sceneManager.world,
-      this.sceneManager.components
-    );
+    this.modelManager = await ModelManager.create(this.sceneManager.world, this.sceneManager.components);
+    this.hider = new HiderPanel(this.sceneManager.components, this.modelManager.fragmentManager);
 
-    this.hider = new HiderPanel(
-      this.sceneManager.components,
-      this.modelManager.fragmentManager
-    );
+    // ✅ Wait for fragments to finish loading before initializing highlight logic
+    await new Promise(resolve => {
+      const checkReady = () => {
+        if (this.modelManager.fragmentManager.list.size > 0) {
+          resolve(true);
+        } else {
+          setTimeout(checkReady, 100);  // check again in 100ms
+        }
+      };
+      checkReady();
+    });
 
     this.controller = new HighlightController(this.modelManager, this.hider);
-    await this.controller.initialize(
-      "./config.json",
-      "./excel-sheet/data.xlsx",
-      "./guids/guids.json"
-    );
+    await this.controller.initialize("./config.json", "./excel-sheet/data.xlsx", "./guids/guids.json");
+    await this.controller.refreshProcessedData();
 
-    // Initialize Views Manager
-    this.viewsManager = new ViewsManager(
-      this.sceneManager.components,
-      this.sceneManager.world
-    );
+    // ✅ Views Manager
+    this.viewsManager = new ViewsManager(this.sceneManager.components, this.sceneManager.world);
 
-    this.rightPanelsContainer = new RightPanelsContainer(this.hider,this.viewsManager);
+    if (this.viewsManager.clipper) {
+      this.clipperInit();
+    }
+
+    // ✅ UI Panels
+    this.rightPanelsContainer = new RightPanelsContainer(this.hider, this.viewsManager);
     this.rightPanelsContainer.initialize();
 
-    // Initialize Excel data panel
     this.excelPanel = new ExcelDataPanel("container");
-
-    // Load Excel data - specify your column names here
-    await this.excelPanel.loadExcelData(
-      "./excel-sheet/data.xlsx",
-      "Activity Name", // Replace with your first column name
-      "Performance % Complete" // Replace with your second column name
-    );
-
-    // Add search functionality
+    await this.excelPanel.loadExcelData("./excel-sheet/data.xlsx", "Activity Name", "Performance % Complete");
     this.excelPanel.addSearchBox();
-
-    // Set up event listeners for Excel data interaction
     this.setupExcelIntegration();
+
+    this.detailsWindow = new DetailsWindow(this.sceneManager, this.modelManager, this.controller);
   }
+
 
   private setupExcelIntegration(): void {
     // Listen for Excel row selection events
@@ -143,4 +141,35 @@ export class BimViewerApp {
     this.excelPanel?.dispose();
     this.sceneManager.world.dispose?.();
   }
+
+  public clipperInit(): void {
+  if (!this.viewsManager.clipper) {
+    console.error("Clipper is not initialized.");
+    return;
+  }
+
+  console.log("Initializing Clipper...");
+
+  this.viewsManager.clipper.onAfterCreate.add(() => {
+    this.controller.updateStatusIndicator("clipper added");
+  });
+
+  this.viewsManager.clipper.onAfterDelete.add(() => {
+    this.controller.updateStatusIndicator("clipper deleted");
+    console.log("deleted");
+  });
+
+  window.onkeydown = (event) => {
+    if (event.code === "Insert" && this.viewsManager.clipper.enabled) {
+      this.viewsManager.clipper.create(this.sceneManager.world);
+    }
+
+    if (event.code === "Delete" || event.code === "Backspace") {
+      if (this.viewsManager.clipper.enabled) {
+        this.viewsManager.clipper.delete(this.sceneManager.world);
+      }
+    }
+  };
+}
+
 }

@@ -259,7 +259,7 @@ export class ExcelDataPanel {
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
       if (jsonData.length === 0) {
-        console.error("No data found in Excel file");
+        // console.error("No data found in Excel file");
         return;
       }
 
@@ -276,9 +276,6 @@ export class ExcelDataPanel {
       );
 
       if (columnAIndex === -1 || columnBIndex === -1 || columnCIndex === -1) {
-        console.error(
-          `Columns "${columnAName}", "${columnBName}", or "${columnCName}" not found`
-        );
         return;
       }
 
@@ -301,6 +298,8 @@ export class ExcelDataPanel {
           });
         }
       }
+      // Inside loadExcelData method, right after pushing data to this.data
+      console.log("Loaded Excel Data:", this.data);  // Log loaded data
 
       this.columnA = columnAName;
       this.columnB = columnBName;
@@ -309,7 +308,7 @@ export class ExcelDataPanel {
     } catch (error) {
       console.error("Error loading Excel data:", error);
     } finally {
-      // Remove loading state
+      // Remove loading state 
       const panel = document.getElementById("excel-data-panel");
       if (panel) panel.classList.remove("loading");
     }
@@ -652,7 +651,7 @@ export class ExcelDataPanel {
     index: number,
     rowElement: HTMLTableRowElement
   ): void {
-    console.log("Row clicked:", rowData, "Index:", index);
+    // console.log("Row clicked:", rowData, "Index:", index);
 
     // Toggle row expansion
     const wasExpanded = this.expandedRows.has(index);
@@ -858,23 +857,23 @@ export class ExcelDataPanel {
   }
 
   private toggleCollapse(): void {
-    console.log("Toggle collapse called, current state:", this.isCollapsed);
+    // console.log("Toggle collapse called, current state:", this.isCollapsed);
 
     const panel = document.getElementById("excel-data-panel");
     const content = document.getElementById("excel-content");
     const arrow = document.getElementById("collapse-arrow");
 
     if (!panel || !content || !arrow) {
-      console.error("Required elements not found:", {
+/*       console.error("Required elements not found:", {
         panel: !!panel,
         content: !!content,
         arrow: !!arrow,
-      });
+      }); */
       return;
     }
 
     this.isCollapsed = !this.isCollapsed;
-    console.log("New collapse state:", this.isCollapsed);
+    // console.log("New collapse state:", this.isCollapsed);
 
     // Find search container by looking for the input element
     const searchContainer = panel.querySelector(

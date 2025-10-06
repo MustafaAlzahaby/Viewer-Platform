@@ -8,6 +8,9 @@ export class DataProcessor {
   
   public inProgressResults: MappedResult[] = [];
   public completedResults: MappedResult[] = [];
+  
+  // Map to store raw Excel rows and their corresponding extracted parameters
+  public rawToMappedResults: Map<any[], MappedResult> = new Map();
 
   async initialize(configUrl: string, dataUrl: string): Promise<void> {
     try {
@@ -26,9 +29,20 @@ export class DataProcessor {
     }
 
     const excelData = await FileUtils.loadExcelDataFromBuffer(this.filteredBuffer);
-    const results = excelData
-      .map((row) => MappingUtils.mapRow(row, this.config!))
-      .filter((r): r is MappedResult => r !== undefined);
+    
+    // Clear existing mapping
+    this.rawToMappedResults.clear();
+    
+    // Process rows and create mapping
+    const results: MappedResult[] = [];
+    excelData.forEach((row) => {
+      const mappedResult = MappingUtils.mapRow(row, this.config!);
+      if (mappedResult) {
+        results.push(mappedResult);
+        // Store the mapping between raw row and extracted parameters
+        this.rawToMappedResults.set(row, mappedResult);
+      }
+    });
 
     const uniqueResults = MappingUtils.removeDuplicates(results);
     
