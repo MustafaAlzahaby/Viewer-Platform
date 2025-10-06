@@ -25,22 +25,47 @@ export class ModelManager {
   }
 
   private async initialize(): Promise<OBC.FragmentsManager> {
+    console.log("[ModelManager] Initializing worker...");
     const fragments = await this.initializeWorker();
+
     // const fragPaths = ["models/z1.frag", "models/z2.frag", "models/z3.frag", "models/z4.frag", "models/z5.frag", "models/z6.frag"];
     const fragPaths = ["models/z6.frag"];
 
+    console.log(`[ModelManager] Loading ${fragPaths.length} fragment file(s)...`);
+
+    // Load all fragments
     await Promise.all(
-      fragPaths.map(async (path) => {
+      fragPaths.map(async (path, index) => {
         const modelId = path.split("/").pop()?.split(".").shift();
         if (!modelId) return null;
 
+        console.log(`[ModelManager] Fetching ${path}...`);
         const file = await fetch(path);
         const buffer = await file.arrayBuffer();
+        console.log(`[ModelManager] Loaded ${path} (${(buffer.byteLength / 1024 / 1024).toFixed(2)} MB)`);
 
-        this.modelIds.push(modelId); // Save the modelId
-        return fragments.core.load(buffer, { modelId });
+        this.modelIds.push(modelId);
+        console.log(`[ModelManager] Loading fragment ${index + 1}/${fragPaths.length}: ${modelId}`);
+        const result = await fragments.core.load(buffer, { modelId });
+        console.log(`[ModelManager] Fragment ${modelId} loaded successfully`);
+        return result;
       })
     );
+
+    console.log("[ModelManager] All fragments loaded");
+
+    // Wait for fragments to be added to the scene
+    await new Promise<void>(resolve => {
+      const checkAdded = () => {
+        if (fragments.list.size === fragPaths.length) {
+          console.log(`[ModelManager] All ${fragments.list.size} fragments added to scene`);
+          resolve();
+        } else {
+          setTimeout(checkAdded, 50);
+        }
+      };
+      checkAdded();
+    });
 
     return fragments;
   }

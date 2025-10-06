@@ -29,43 +29,76 @@ export class BimViewerApp {
   }
 
     private async initialize(): Promise<void> {
+    console.log("[BimViewerApp] Starting initialization...");
+
     // Initialize core components
     this.modelManager = await ModelManager.create(this.sceneManager.world, this.sceneManager.components);
-    this.hider = new HiderPanel(this.sceneManager.components, this.modelManager.fragmentManager);
+    console.log("[BimViewerApp] ModelManager created");
 
-    // ✅ Wait for fragments to finish loading before initializing highlight logic
-    await new Promise(resolve => {
+    this.hider = new HiderPanel(this.sceneManager.components, this.modelManager.fragmentManager);
+    console.log("[BimViewerApp] HiderPanel created");
+
+    // ✅ Wait for ALL fragments to fully load and be ready
+    console.log("[BimViewerApp] Waiting for fragments to load...");
+    await new Promise<void>(resolve => {
+      let lastSize = 0;
+      let stableCount = 0;
+
       const checkReady = () => {
-        if (this.modelManager.fragmentManager.list.size > 0) {
-          resolve(true);
-        } else {
-          setTimeout(checkReady, 100);  // check again in 100ms
+        const currentSize = this.modelManager.fragmentManager.list.size;
+
+        // Check if we have fragments and the count has stabilized
+        if (currentSize > 0) {
+          if (currentSize === lastSize) {
+            stableCount++;
+            // Wait for 3 consecutive checks with same size (300ms total)
+            if (stableCount >= 3) {
+              console.log(`[BimViewerApp] Fragments loaded and stable (${currentSize} fragments)`);
+              // Add extra delay to ensure all geometry is processed
+              setTimeout(() => resolve(), 500);
+              return;
+            }
+          } else {
+            stableCount = 0;
+            lastSize = currentSize;
+          }
         }
+
+        setTimeout(checkReady, 100);
       };
+
       checkReady();
     });
 
+    // ✅ Initialize highlight controller AFTER fragments are ready
+    console.log("[BimViewerApp] Initializing HighlightController...");
     this.controller = new HighlightController(this.modelManager, this.hider);
+
+    console.log("[BimViewerApp] Loading config and data...");
     await this.controller.initialize("./config.json", "./excel-sheet/data.xlsx", "./guids/guids.json");
+
+    console.log("[BimViewerApp] Refreshing processed data...");
     await this.controller.refreshProcessedData();
+
+    console.log("[BimViewerApp] HighlightController ready");
 
     // ✅ Views Manager
     this.viewsManager = new ViewsManager(this.sceneManager.components, this.sceneManager.world);
-
-    if (this.viewsManager.clipper) {
-      this.clipperInit();
-    }
 
     // ✅ UI Panels
     this.rightPanelsContainer = new RightPanelsContainer(this.hider, this.viewsManager);
     this.rightPanelsContainer.initialize();
 
+    console.log("[BimViewerApp] Loading Excel panel...");
     this.excelPanel = new ExcelDataPanel("container");
     await this.excelPanel.loadExcelData("./excel-sheet/data.xlsx", "Activity Name", "Performance % Complete");
     this.excelPanel.addSearchBox();
     this.setupExcelIntegration();
+    console.log("[BimViewerApp] Excel panel ready");
 
     this.detailsWindow = new DetailsWindow(this.sceneManager, this.modelManager, this.controller);
+
+    console.log("[BimViewerApp] Initialization complete!");
   }
 
 
@@ -141,35 +174,5 @@ export class BimViewerApp {
     this.excelPanel?.dispose();
     this.sceneManager.world.dispose?.();
   }
-
-  public clipperInit(): void {
-  if (!this.viewsManager.clipper) {
-    console.error("Clipper is not initialized.");
-    return;
-  }
-
-  console.log("Initializing Clipper...");
-
-  this.viewsManager.clipper.onAfterCreate.add(() => {
-    this.controller.updateStatusIndicator("clipper added");
-  });
-
-  this.viewsManager.clipper.onAfterDelete.add(() => {
-    this.controller.updateStatusIndicator("clipper deleted");
-    console.log("deleted");
-  });
-
-  window.onkeydown = (event) => {
-    if (event.code === "Insert" && this.viewsManager.clipper.enabled) {
-      this.viewsManager.clipper.create(this.sceneManager.world);
-    }
-
-    if (event.code === "Delete" || event.code === "Backspace") {
-      if (this.viewsManager.clipper.enabled) {
-        this.viewsManager.clipper.delete(this.sceneManager.world);
-      }
-    }
-  };
-}
 
 }
