@@ -19,7 +19,7 @@ type EditableProject = Project & { _editing?: boolean }
 type Role = 'admin' | 'uploader' | 'viewer'
 
 export function Dashboard({ onOpenViewer, onOpenBaseline, onBackToHome }: DashboardProps) {
-  const { profile, loading: authLoading, signOut, isAdmin, isUploader } = useAuth()
+  const { user, profile, loading: authLoading, signOut, isAdmin, isUploader } = useAuth()
   const [projects, setProjects] = useState<EditableProject[]>([])
   const [loading, setLoading] = useState(true)
   const [hoveredProject, setHoveredProject] = useState<string | null>(null)

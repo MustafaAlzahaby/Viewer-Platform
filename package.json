@@ -28,6 +28,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
+    "@tanstack/react-table": "^8.21.3",
     "@thatopen/components": "3.1.2",
     "@thatopen/components-front": "3.1.6",
     "@thatopen/fragments": "3.1.6",
@@ -38,6 +39,8 @@
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.9",
     "@types/react-router-dom": "^5.3.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "framer-motion": "^12.23.12",
     "lucide-react": "^0.542.0",
     "mkcert": "^3.2.0",
@@ -46,6 +49,9 @@
     "react-router-dom": "^7.9.1",
     "stats.js": "^0.17.0",
     "supabase": "^2.47.2",
+    "tailwind-merge": "^3.3.1",
+    "tailwind-variants": "^3.1.1",
+    "tailwindcss-animate": "^1.0.7",
     "xlsx": "^0.18.5"
   }
 }

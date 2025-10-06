@@ -16,12 +16,22 @@ function App() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
 
-  // Debug logging
+  // ✅ [Auto Redirect]
+  useEffect(() => {
+    if (!loading && user && profile) {
+      console.log('[Auth] User + profile loaded, switching app state')
+      if (profile.role === 'admin') {
+        setAppState('admin')
+      } else {
+        setAppState('dashboard')
+      }
+    }
+  }, [loading, user, profile])
+
   useEffect(() => {
     console.log('App state:', { appState, user: !!user, profile: !!profile, loading })
   }, [appState, user, profile, loading])
 
-  // Show loading spinner while checking authentication
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
@@ -33,7 +43,6 @@ function App() {
     )
   }
 
-  // Actions
   const handleOpenViewer = async (project: Project) => {
     setSelectedProject(project)
     window.open('/viewer.html', '_blank')
@@ -56,7 +65,6 @@ function App() {
 
   const handleGetStarted = () => {
     console.log('[UI] Get Started clicked → opening AuthModal')
-    // Don’t auto sign-out here. Just open the modal.
     setShowAuthModal(true)
   }
 
@@ -65,7 +73,7 @@ function App() {
   const handleAuthSuccess = () => {
     console.log('[Auth] Success → closing modal & routing')
     setShowAuthModal(false)
-    
+
     // Wait for profile to be loaded before routing
     setTimeout(() => {
       if (profile?.role === 'admin') {
@@ -78,7 +86,6 @@ function App() {
 
   console.log('Rendering app state:', appState)
 
-  // Render main content
   let content: React.ReactNode = null
 
   switch (appState) {
@@ -96,7 +103,6 @@ function App() {
       break
 
     case 'admin':
-      // Only show admin panel if user is actually an admin
       if (profile?.role === 'admin') {
         content = (
           <div>
@@ -117,7 +123,6 @@ function App() {
           </div>
         )
       } else {
-        // If not admin, redirect to dashboard
         console.log('[App] Non-admin trying to access admin panel, redirecting to dashboard')
         setAppState('dashboard')
         content = (
@@ -131,7 +136,6 @@ function App() {
       break
 
     case 'dashboard':
-      // Ensure we have a valid user and profile before showing dashboard
       if (!user || !profile) {
         console.log('[App] No user/profile in dashboard state, redirecting to landing')
         setAppState('landing')
@@ -193,7 +197,6 @@ function App() {
       )
   }
 
-  // Always mount the AuthModal so it can open from anywhere, with a very high z-index
   return (
     <>
       {content}

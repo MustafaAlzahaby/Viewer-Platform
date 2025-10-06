@@ -27,7 +27,7 @@ export class ModelManager {
   private async initialize(): Promise<OBC.FragmentsManager> {
     const fragments = await this.initializeWorker();
     // const fragPaths = ["models/z1.frag", "models/z2.frag", "models/z3.frag", "models/z4.frag", "models/z5.frag", "models/z6.frag"];
-    const fragPaths = ["models/z6.frag"];
+    const fragPaths = ["models/z06.frag"];
 
     await Promise.all(
       fragPaths.map(async (path) => {

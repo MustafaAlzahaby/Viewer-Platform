@@ -3,38 +3,23 @@ import { BimViewerApp } from "./BimViewerApp";
 const CONTAINER_ID = "container";
 let bimApp: BimViewerApp | null = null;
 
-// Initialize the application
+function getQueryParam(param: string): string | null {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get(param);
+}
+
 async function initializeApp(): Promise<void> {
   try {
-    console.log("Initializing BIM Viewer...");
-
-
-    const containerElement = document.getElementById(CONTAINER_ID);
-    if (!containerElement) {
-      console.error("Container element not found");
-    } else {
-      console.log("Container found, initializing BIM Viewer...");
-    } 
-
-    // Create the BIM viewer app instance
-    bimApp = await BimViewerApp.create(CONTAINER_ID);
-
-    // Make app globally available for debugging and external access
+    const project = getQueryParam("project") || "z06";
+    bimApp = await BimViewerApp.create(CONTAINER_ID, project);
     (window as any).bimApp = bimApp;
-
-    console.log("BIM Viewer Application started successfully!");
-
-    // Optional: Set up additional event listeners or configurations
-    //  setupAdditionalFeatures();
   } catch (error) {
-    console.error("Failed to start BIM Viewer Application:", error);
+    console.error("Error initializing viewer:", error);
   } finally {
-    // Hide the loading spinner
     hideLoadingSpinner();
   }
 }
 
-// Hide loading spinner
 function hideLoadingSpinner(): void {
   const spinner = document.getElementById("loading-spinner");
   if (spinner) {
@@ -46,23 +31,13 @@ function hideLoadingSpinner(): void {
   }
 }
 
-// Graceful cleanup on page unload
 window.addEventListener("beforeunload", () => {
-  if (bimApp) {
-    bimApp.dispose();
-    bimApp = null;  
-  }
+  bimApp?.dispose();
+  bimApp = null;
 });
 
-function delayedInitializeApp() {
-  setTimeout(() => {
-    initializeApp();
-  }, 1000); // 1 second delay to let files load
-}
-
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", delayedInitializeApp);
+  document.addEventListener("DOMContentLoaded", initializeApp);
 } else {
-  delayedInitializeApp();
+  initializeApp();
 }
-

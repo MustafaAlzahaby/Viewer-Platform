@@ -257,7 +257,8 @@ export class ExcelDataPanel {
 
       // Convert to JSON
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
+      console.log("✅ Excel data loaded:", jsonData);
+      
       if (jsonData.length === 0) {
         // console.error("No data found in Excel file");
         return;
