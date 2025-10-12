@@ -10,6 +10,7 @@ import { supabase } from '../lib/supabase'
 import type { Project, UserProfile } from '../lib/supabase'
 
 interface DashboardProps {
+  authState: ReturnType<typeof useAuth>
   onOpenViewer: (project: Project) => void
   onOpenBaseline: (project: Project) => void
   onBackToHome: () => void
@@ -18,8 +19,8 @@ interface DashboardProps {
 type EditableProject = Project & { _editing?: boolean }
 type Role = 'admin' | 'uploader' | 'viewer'
 
-export function Dashboard({ onOpenViewer, onOpenBaseline, onBackToHome }: DashboardProps) {
-  const { user, profile, loading: authLoading, signOut, isAdmin, isUploader } = useAuth()
+export function Dashboard({ authState, onOpenViewer, onOpenBaseline, onBackToHome }: DashboardProps) {
+  const { user, profile, signOut, isAdmin, isUploader } = authState
   const [projects, setProjects] = useState<EditableProject[]>([])
   const [loading, setLoading] = useState(true)
   const [hoveredProject, setHoveredProject] = useState<string | null>(null)
@@ -54,7 +55,7 @@ export function Dashboard({ onOpenViewer, onOpenBaseline, onBackToHome }: Dashbo
   })
 
   useEffect(() => {
-    if (authLoading) return
+    // ✅ Remove authLoading check
     if (!profile?.id) {
       setProjects([])
       setLoading(false)
@@ -62,7 +63,7 @@ export function Dashboard({ onOpenViewer, onOpenBaseline, onBackToHome }: Dashbo
     }
     fetchProjects()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, profile?.id, isAdmin])
+  }, [profile?.id, isAdmin])  // ✅ Remove authLoading from dependencies
 
   const fetchProjects = async () => {
     try {

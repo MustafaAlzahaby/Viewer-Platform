@@ -75,7 +75,7 @@ export class BimViewerApp {
     this.rightPanelsContainer = new RightPanelsContainer(this.hider, this.viewsManager);
     this.rightPanelsContainer.initialize();
 
-    console.log("[BimViewerApp] Loading Excel panel from:", excelUrl);
+    console.log("[BimViewerApp] Loading Excel panel from:", excelPath);
     this.excelPanel = new ExcelDataPanel("container");
     await this.excelPanel.loadExcelData(
       excelPath,

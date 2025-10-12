@@ -1,17 +1,29 @@
 import { createClient } from '@supabase/supabase-js'
 
+// === Supabase Config ===
 const supabaseUrl: string | undefined = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey: string | undefined = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Missing Supabase environment variables - using demo mode')
+  console.warn('⚠️ Missing Supabase environment variables — running in demo mode')
 }
 
+// ✅ Always create the client with persistent session and auto-refresh
 export const supabase = (supabaseUrl && supabaseAnonKey)
-  ? createClient(supabaseUrl, supabaseAnonKey)
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,          // ✅ keeps session after tab close/reload
+        storage: localStorage,         // ✅ use localStorage, not sessionStorage
+        autoRefreshToken: true,        // ✅ refresh tokens automatically
+        detectSessionInUrl: true,      // ✅ handle URL-based sessions (OAuth, etc.)
+      },
+      global: {
+        headers: { 'x-application-name': 'RME-BIMViewer' }, // optional metadata
+      },
+    })
   : null
 
-// Types
+// === Types ===
 export interface UserProfile {
   id: string
   email: string
