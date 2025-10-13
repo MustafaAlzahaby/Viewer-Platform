@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Building2, BarChart3, Activity,Clock, Users, Shield, ArrowRight, CheckCircle, Zap, Globe, Award, TrendingUp, Cuboid as Cube, Eye, Layers, Monitor, Smartphone, Tablet } from 'lucide-react'
+import { Building2, BarChart3, Activity, Clock, Users, Shield, ArrowRight, CheckCircle, Zap, Globe, Award, TrendingUp, Cuboid as Cube, Eye, Layers, Monitor, Smartphone, Tablet } from 'lucide-react'
+import { DarkModeToggle } from './DarkModeToggle'
 
 interface LandingPageProps {
   onGetStarted: () => void,
@@ -13,10 +14,10 @@ export function LandingPage({ onGetStarted, onAboutUs }: LandingPageProps) {
 
   // Hero images showcasing 3D visualization and digital twin
   const heroImages = [
-    'https://images.pexels.com/photos/3862132/pexels-photo-3862132.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop', // 3D Building visualization
-    'https://images.pexels.com/photos/3861969/pexels-photo-3861969.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop', // Digital construction
-    'https://images.pexels.com/photos/3862365/pexels-photo-3862365.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop', // BIM modeling
-    'https://images.pexels.com/photos/3861458/pexels-photo-3861458.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop', // Construction tech
+    'https://images.pexels.com/photos/3862132/pexels-photo-3862132.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop',
+    'https://images.pexels.com/photos/3861969/pexels-photo-3861969.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop',
+    'https://images.pexels.com/photos/3862365/pexels-photo-3862365.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop',
+    'https://images.pexels.com/photos/3861458/pexels-photo-3861458.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop',
   ]
 
   const features = [
@@ -60,10 +61,10 @@ export function LandingPage({ onGetStarted, onAboutUs }: LandingPageProps) {
   }, [])
 
   return (
-    <div className="min-h-screen bg-white overflow-hidden">
+    <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-300 overflow-hidden">
       {/* Animated Background */}
       <div className="fixed inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-50 via-white to-red-50/30" />
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-50 via-white to-red-50/30 dark:from-gray-900 dark:via-gray-800 dark:to-red-900/20 transition-colors duration-300" />
         <div className="absolute inset-0 opacity-5">
           <svg width="100%" height="100%" viewBox="0 0 1200 800">
             <defs>
@@ -77,7 +78,7 @@ export function LandingPage({ onGetStarted, onAboutUs }: LandingPageProps) {
         
         {/* Floating geometric shapes */}
         <motion.div
-          className="absolute top-20 left-10 w-20 h-20 bg-red-500/10 rounded-lg"
+          className="absolute top-20 left-10 w-20 h-20 bg-red-500/10 dark:bg-red-400/10 rounded-lg"
           animate={{
             y: [0, -20, 0],
             rotate: [0, 180, 360],
@@ -89,7 +90,7 @@ export function LandingPage({ onGetStarted, onAboutUs }: LandingPageProps) {
           }}
         />
         <motion.div
-          className="absolute top-40 right-20 w-16 h-16 bg-red-600/10 rounded-full"
+          className="absolute top-40 right-20 w-16 h-16 bg-red-600/10 dark:bg-red-300/10 rounded-full"
           animate={{
             y: [0, 30, 0],
             x: [0, -10, 0],
@@ -101,7 +102,7 @@ export function LandingPage({ onGetStarted, onAboutUs }: LandingPageProps) {
           }}
         />
         <motion.div
-          className="absolute bottom-40 left-1/4 w-12 h-12 bg-red-400/10"
+          className="absolute bottom-40 left-1/4 w-12 h-12 bg-red-400/10 dark:bg-red-200/10"
           style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }}
           animate={{
             rotate: [0, 360],
@@ -116,7 +117,7 @@ export function LandingPage({ onGetStarted, onAboutUs }: LandingPageProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="relative z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100/50 shadow-sm">
+      <nav className="relative z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-100/50 dark:border-gray-700/50 shadow-sm transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             <motion.div 
@@ -131,15 +132,15 @@ export function LandingPage({ onGetStarted, onAboutUs }: LandingPageProps) {
                   whileHover={{ scale: 1.05, rotate: 5 }}
                   transition={{ type: "spring", stiffness: 300 }}
                 >
-                  <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+                  <div className="w-8 h-8 bg-white dark:bg-gray-800 rounded-lg flex items-center justify-center transition-colors duration-300">
                     <div className="w-4 h-4 bg-red-500 rounded-sm"></div>
                   </div>
                 </motion.div>
                 <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full animate-pulse"></div>
               </div>
               <div>
-                <span className="text-2xl font-bold text-gray-900">ROWAD</span>
-                <div className="text-xs text-red-600 font-semibold -mt-1 tracking-wider">PROGRESS MONITORING</div>
+                <span className="text-2xl font-bold text-gray-900 dark:text-white transition-colors duration-300">ROWAD</span>
+                <div className="text-xs text-red-600 dark:text-red-400 font-semibold -mt-1 tracking-wider transition-colors duration-300">PROGRESS MONITORING</div>
               </div>
             </motion.div>
             
@@ -154,29 +155,32 @@ export function LandingPage({ onGetStarted, onAboutUs }: LandingPageProps) {
                 <motion.button
                   key={item.name}
                   onClick={item.action}
-                  className="text-gray-700 hover:text-red-600 font-medium transition-all duration-300 relative group"
+                  className="text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 font-medium transition-all duration-300 relative group"
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: index * 0.1 }}
                   whileHover={{ y: -2 }}
                 >
                   {item.name}
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-red-600 transition-all duration-300 group-hover:w-full"></span>
+                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-red-600 dark:bg-red-400 transition-all duration-300 group-hover:w-full"></span>
                 </motion.button>
               ))}
             </div>
 
-            <motion.button
-              onClick={onGetStarted}
-              className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-8 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6 }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              Get Started
-            </motion.button>
+            <div className="flex items-center gap-4">
+              <DarkModeToggle />
+              <motion.button
+                onClick={onGetStarted}
+                className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-8 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Get Started
+              </motion.button>
+            </div>
           </div>
         </div>
       </nav>
@@ -191,7 +195,7 @@ export function LandingPage({ onGetStarted, onAboutUs }: LandingPageProps) {
             transition={{ duration: 0.8, delay: 0.2 }}
           >
             <motion.div
-              className="inline-flex items-center gap-2 bg-red-50 text-red-600 px-4 py-2 rounded-full text-sm font-medium mb-8"
+              className="inline-flex items-center gap-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-4 py-2 rounded-full text-sm font-medium mb-8 transition-colors duration-300"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
@@ -201,7 +205,7 @@ export function LandingPage({ onGetStarted, onAboutUs }: LandingPageProps) {
             </motion.div>
 
             <motion.h1
-              className="text-6xl lg:text-7xl font-bold text-gray-900 mb-8 leading-tight"
+              className="text-6xl lg:text-7xl font-bold text-gray-900 dark:text-white mb-8 leading-tight transition-colors duration-300"
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.6 }}
@@ -214,7 +218,7 @@ export function LandingPage({ onGetStarted, onAboutUs }: LandingPageProps) {
             </motion.h1>
 
             <motion.p
-              className="text-xl text-gray-600 mb-10 leading-relaxed max-w-lg"
+              className="text-xl text-gray-600 dark:text-gray-300 mb-10 leading-relaxed max-w-lg transition-colors duration-300"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.8 }}
@@ -242,19 +246,18 @@ export function LandingPage({ onGetStarted, onAboutUs }: LandingPageProps) {
               
               <motion.button
                 onClick={() => window.open('/viewer.html', '_blank')}
-                className="group text-gray-700 hover:text-red-600 px-10 py-4 rounded-xl font-semibold text-lg transition-all duration-300 border-2 border-gray-300 hover:border-red-500 bg-white/50 backdrop-blur-sm flex items-center gap-3"
+                className="group text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 px-10 py-4 rounded-xl font-semibold text-lg transition-all duration-300 border-2 border-gray-300 dark:border-gray-600 hover:border-red-500 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm flex items-center gap-3"
                 whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.95 }}
               >
                 <Eye className="w-5 h-5" />
                 View Demo
               </motion.button>
-
             </motion.div>
 
             {/* Stats */}
             <motion.div
-              className="grid grid-cols-3 gap-8 mt-16 pt-8 border-t border-gray-200"
+              className="grid grid-cols-3 gap-8 mt-16 pt-8 border-t border-gray-200 dark:border-gray-700 transition-colors duration-300"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 1.2 }}
@@ -265,8 +268,8 @@ export function LandingPage({ onGetStarted, onAboutUs }: LandingPageProps) {
                 { number: '3D', label: 'Visualization' }
               ].map((stat, index) => (
                 <div key={stat.label} className="text-center">
-                  <div className="text-3xl font-bold text-red-600 mb-2">{stat.number}</div>
-                  <div className="text-sm text-gray-600">{stat.label}</div>
+                  <div className="text-3xl font-bold text-red-600 dark:text-red-400 mb-2 transition-colors duration-300">{stat.number}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 transition-colors duration-300">{stat.label}</div>
                 </div>
               ))}
             </motion.div>
@@ -339,7 +342,7 @@ export function LandingPage({ onGetStarted, onAboutUs }: LandingPageProps) {
 
             {/* Floating Elements */}
             <motion.div
-              className="absolute -top-4 -right-4 w-24 h-24 bg-red-500/10 rounded-2xl backdrop-blur-sm border border-red-200/20 flex items-center justify-center"
+              className="absolute -top-4 -right-4 w-24 h-24 bg-red-500/10 dark:bg-red-400/10 rounded-2xl backdrop-blur-sm border border-red-200/20 dark:border-red-300/20 flex items-center justify-center transition-colors duration-300"
               animate={{
                 y: [0, -10, 0],
                 rotate: [0, 5, 0],
@@ -350,11 +353,11 @@ export function LandingPage({ onGetStarted, onAboutUs }: LandingPageProps) {
                 ease: "easeInOut"
               }}
             >
-              <Cube className="w-8 h-8 text-red-500" />
+              <Cube className="w-8 h-8 text-red-500 dark:text-red-400 transition-colors duration-300" />
             </motion.div>
 
             <motion.div
-              className="absolute -bottom-4 -left-4 w-20 h-20 bg-white/80 rounded-2xl backdrop-blur-sm shadow-lg flex items-center justify-center"
+              className="absolute -bottom-4 -left-4 w-20 h-20 bg-white/80 dark:bg-gray-800/80 rounded-2xl backdrop-blur-sm shadow-lg flex items-center justify-center transition-colors duration-300"
               animate={{
                 y: [0, 10, 0],
                 rotate: [0, -5, 0],
@@ -365,14 +368,14 @@ export function LandingPage({ onGetStarted, onAboutUs }: LandingPageProps) {
                 ease: "easeInOut"
               }}
             >
-              <Layers className="w-6 h-6 text-red-600" />
+              <Layers className="w-6 h-6 text-red-600 dark:text-red-400 transition-colors duration-300" />
             </motion.div>
           </motion.div>
         </div>
       </div>
 
       {/* Features Section */}
-      <div className="relative z-10 py-32 bg-gradient-to-b from-white to-gray-50">
+      <div className="relative z-10 py-32 bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             className="text-center mb-20"
@@ -382,7 +385,7 @@ export function LandingPage({ onGetStarted, onAboutUs }: LandingPageProps) {
             viewport={{ once: true }}
           >
             <motion.div
-              className="inline-flex items-center gap-2 bg-red-50 text-red-600 px-4 py-2 rounded-full text-sm font-medium mb-6"
+              className="inline-flex items-center gap-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-4 py-2 rounded-full text-sm font-medium mb-6 transition-colors duration-300"
               initial={{ opacity: 0, scale: 0.8 }}
               whileInView={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6 }}
@@ -392,13 +395,13 @@ export function LandingPage({ onGetStarted, onAboutUs }: LandingPageProps) {
               Core Features
             </motion.div>
             
-            <h2 className="text-5xl font-bold text-gray-900 mb-6">
+            <h2 className="text-5xl font-bold text-gray-900 dark:text-white mb-6 transition-colors duration-300">
               How It Works
               <span className="block bg-gradient-to-r from-red-500 to-red-600 bg-clip-text text-transparent">
                 Progress Made Visual
               </span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto transition-colors duration-300">
               Our platform bridges the gap between field progress and digital visualization, 
               giving you real-time insights into your construction projects.
             </p>
@@ -408,7 +411,7 @@ export function LandingPage({ onGetStarted, onAboutUs }: LandingPageProps) {
             {features.map((feature, index) => (
               <motion.div
                 key={feature.title}
-                className="group relative bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 hover:border-red-200"
+                className="group relative bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 dark:border-gray-700 hover:border-red-200 dark:hover:border-red-400/30"
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
@@ -423,10 +426,10 @@ export function LandingPage({ onGetStarted, onAboutUs }: LandingPageProps) {
                   <feature.icon className="w-8 h-8 text-white" />
                 </motion.div>
                 
-                <h3 className="text-xl font-bold text-gray-900 mb-4 group-hover:text-red-600 transition-colors">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors duration-300">
                   {feature.title}
                 </h3>
-                <p className="text-gray-600 leading-relaxed">
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed transition-colors duration-300">
                   {feature.description}
                 </p>
 

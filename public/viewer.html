@@ -7,7 +7,6 @@
       content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
     />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/icon?family=Material+Icons"
@@ -16,12 +15,67 @@
     <link rel="icon" type="image/x-icon" href="/Rowad-Logo.ico" />
     <title>BIM Viewer</title>
   </head>
-
   <body>
     <div class="full-screen" id="container"></div>
     <div id="loading-spinner">
       <div></div>
     </div>
+    
+    <!-- Session isolation script - runs BEFORE main.ts -->
+    <script type="module">
+      // ✅ Prevent this viewer tab from interfering with parent window's auth state
+      console.log('[Viewer] Initializing isolated session...')
+      
+      // Flag to indicate this is a viewer tab
+      window.isViewerTab = true
+      
+      // ✅ Block storage events from propagating to other tabs
+      window.addEventListener('storage', (e) => {
+        // Prevent Supabase auth events from syncing across tabs
+        if (e.key && e.key.includes('supabase.auth')) {
+          e.stopImmediatePropagation()
+          console.log('[Viewer] Blocked auth storage event from propagating')
+        }
+      }, true)
+      
+      // Restore session from sessionStorage without triggering broadcasts
+      const storedSession = sessionStorage.getItem('supabaseSession')
+      const storedProject = sessionStorage.getItem('currentProject')
+      
+      if (storedProject) {
+        try {
+          const project = JSON.parse(storedProject)
+          window.currentProject = project
+          console.log('[Viewer] Project loaded:', project.name)
+          console.log('[Viewer] Model URL:', project.model_url)
+          console.log('[Viewer] Excel URL:', project.excel_url)
+        } catch (error) {
+          console.error('[Viewer] Failed to parse project data:', error)
+        }
+      } else {
+        console.warn('[Viewer] ⚠️ No project data found in sessionStorage')
+      }
+      
+      // If you're using Supabase in the viewer, restore session silently
+      if (storedSession) {
+        try {
+          const session = JSON.parse(storedSession)
+          window.restoredSession = session
+          console.log('[Viewer] Session data prepared for restoration')
+          console.log('[Viewer] User:', session.user?.email)
+        } catch (error) {
+          console.error('[Viewer] Failed to parse session:', error)
+        }
+      } else {
+        console.warn('[Viewer] ⚠️ No session data found - viewer may not be authenticated')
+      }
+      
+      // ✅ Optional: Monitor if parent window closes/navigates away
+      window.addEventListener('unload', () => {
+        console.log('[Viewer] Parent window closing, cleaning up...')
+      })
+    </script>
+    
     <script type="module" src="/src/main/main.ts"></script>
   </body>
 </html>

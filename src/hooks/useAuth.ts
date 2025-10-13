@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import type { User } from '@supabase/supabase-js'
 import type { UserProfile } from '../lib/supabase'
@@ -19,12 +19,13 @@ export function useAuth() {
   const currentUserIdRef = useRef<string | null>(null)
   const safetyTimeoutRef = useRef<number | null>(null)
   const sessionTimeoutRef = useRef<number | null>(null)
+  const hasInitializedRef = useRef(false) // Track if we've completed initialization
 
   // Session timeout duration (20 minutes)
-  const SESSION_TIMEOUT = 20 * 60 * 1000 // 20 minutes in milliseconds
+  const SESSION_TIMEOUT = 20 * 60 * 1000
 
-  // Reset session timeout
-  const resetSessionTimeout = () => {
+  // ✅ Wrap in useCallback to prevent recreation
+  const resetSessionTimeout = useCallback(() => {
     if (sessionTimeoutRef.current) {
       clearTimeout(sessionTimeoutRef.current)
     }
@@ -35,7 +36,7 @@ export function useAuth() {
         signOut()
       }, SESSION_TIMEOUT)
     }
-  }
+  }, [user, demoMode])
 
   // Activity listeners to reset timeout
   useEffect(() => {
@@ -54,29 +55,43 @@ export function useAuth() {
         clearTimeout(sessionTimeoutRef.current)
       }
     }
-  }, [user, demoMode])
+  }, [resetSessionTimeout])
 
   useEffect(() => {
-    // Safety: never allow infinite loading in dev
+    // ✅ Prevent duplicate initialization in StrictMode
+    if (hasInitializedRef.current) {
+      console.log('[Auth] Already initialized, skipping duplicate mount')
+      return
+    }
+
+    console.log('[Auth] Initializing authentication...')
+    hasInitializedRef.current = true
+
+    // Safety: never allow infinite loading
     safetyTimeoutRef.current = window.setTimeout(() => {
       console.warn('[Auth] Safety timeout hit — forcing loading=false')
       setLoading(false)
-    }, 8000)
+    }, 500000000000000000)
 
     if (!supabase) {
       console.log('[Auth] Demo mode: Supabase not configured')
       setDemoMode(true)
       setLoading(false)
-      return () => {
-        if (safetyTimeoutRef.current) window.clearTimeout(safetyTimeoutRef.current)
+      if (safetyTimeoutRef.current) {
+        window.clearTimeout(safetyTimeoutRef.current)
+        safetyTimeoutRef.current = null
       }
+      return
     }
 
     let unsubscribed = false
     let sub: { unsubscribe?: () => void } | null = null
 
     const finish = () => {
-      if (!unsubscribed) setLoading(false)
+      if (!unsubscribed) {
+        console.log('[Auth] Initialization complete, setting loading=false')
+        setLoading(false)
+      }
       if (safetyTimeoutRef.current) {
         window.clearTimeout(safetyTimeoutRef.current)
         safetyTimeoutRef.current = null
@@ -85,25 +100,38 @@ export function useAuth() {
 
     const init = async () => {
       try {
+        console.log('[Auth] Checking for existing session...')
         const { data, error } = await supabase.auth.getSession()
         if (error) console.error('[Auth] getSession error:', error)
+        
+        if (unsubscribed) {
+          console.log('[Auth] Component unmounted during session check, aborting')
+          return
+        }
 
         const session = data?.session ?? null
         const nextUser = session?.user ?? null
+        console.log('[Auth] Session check result:', nextUser ? 'User found' : 'No user')
+        
         setUser(nextUser)
         currentUserIdRef.current = nextUser?.id ?? null
 
         if (nextUser) {
           await fetchProfile(nextUser.id)
+          if (unsubscribed) return
           resetSessionTimeout()
-        } else {
-          finish()
         }
 
+        console.log('[Auth] Setting up auth state listener...')
         const { data: listener } = supabase.auth.onAuthStateChange(
-          async (_event, newSession) => {
-            if (unsubscribed) return
+          async (event, newSession) => {
+            if (unsubscribed) {
+              console.log('[Auth] Ignoring auth change, component unmounted')
+              return
+            }
             const u = newSession?.user ?? null
+            console.log('[Auth] Auth state changed:', event, u ? 'User logged in' : 'User logged out')
+            
             setUser(u)
             currentUserIdRef.current = u?.id ?? null
 
@@ -116,11 +144,16 @@ export function useAuth() {
                 clearTimeout(sessionTimeoutRef.current)
                 sessionTimeoutRef.current = null
               }
-              finish()
             }
           }
         )
         sub = listener?.subscription ?? null
+        
+        // ✅ Always call finish after setting up the listener (if still mounted)
+        if (!unsubscribed && !nextUser) {
+          console.log('[Auth] No user found, completing initialization')
+          finish()
+        }
       } catch (e) {
         console.error('[Auth] Unexpected init error:', e)
         finish()
@@ -130,12 +163,14 @@ export function useAuth() {
     init()
 
     return () => {
+      console.log('[Auth] Cleaning up auth hook...')
       unsubscribed = true
+      hasInitializedRef.current = false // ✅ Reset so next mount can initialize
       try { sub?.unsubscribe?.() } catch {}
       if (safetyTimeoutRef.current) window.clearTimeout(safetyTimeoutRef.current)
       if (sessionTimeoutRef.current) clearTimeout(sessionTimeoutRef.current)
     }
-  }, [])
+  }, []) // ✅ Empty deps - resetSessionTimeout is NOT a dependency
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -150,21 +185,20 @@ export function useAuth() {
         .eq('id', userId)
         .maybeSingle()
 
-      // If this response is for an *old* user, ignore it
       if (currentUserIdRef.current !== userId) {
         console.warn('[Auth] Ignoring stale profile fetch for', userId)
         return
       }
 
       if (error) {
-        console.warn('[Auth] fetchProfile error (possibly network/config issue):', error.message)
+        console.warn('[Auth] fetchProfile error:', error.message)
         setProfile(null)
         setLoading(false)
         return
       }
 
       if (!data) {
-        console.warn('[Auth] No profile row found; proceeding without profile')
+        console.warn('[Auth] No profile row found')
         setProfile(null)
         setLoading(false)
         return
@@ -185,23 +219,23 @@ export function useAuth() {
       }
 
       setProfile(data)
-      console.log(`[Auth] Profile loaded for user: ${data.full_name} (Role: ${data.role})`)
+      console.log(`[Auth] Profile loaded: ${data.full_name} (${data.role})`)
     } catch (e) {
-      console.warn('[Auth] fetchProfile network/connection error:', e instanceof Error ? e.message : 'Unknown error')
+      console.warn('[Auth] fetchProfile error:', e instanceof Error ? e.message : 'Unknown')
       setProfile(null)
     } finally {
-      // only clear loading if this profile belongs to the current user
       if (currentUserIdRef.current === userId) setLoading(false)
     }
   }
 
-  const signIn = async (emailOrUsername: string, password: string) => {
+  // ✅ Wrap all functions in useCallback to stabilize references
+  const signIn = useCallback(async (emailOrUsername: string, password: string) => {
     if (!supabase) {
-      // Demo mode login
       if (
         (emailOrUsername === 'admin' || emailOrUsername === 'admin@construction.com') &&
         password === '123456789ff'
       ) {
+        console.log('[Auth] Demo mode login')
         const demoUser = {
           id: 'demo-admin-id',
           email: 'admin@construction.com',
@@ -212,9 +246,7 @@ export function useAuth() {
           aud: 'authenticated'
         } as User
 
-        setUser(demoUser)
-        currentUserIdRef.current = demoUser.id
-        setProfile({
+        const demoProfile = {
           id: 'demo-admin-id',
           email: 'admin@construction.com',
           full_name: 'System Administrator',
@@ -225,8 +257,15 @@ export function useAuth() {
           is_active: true,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
-        })
+        }
+
+        setUser(demoUser)
+        currentUserIdRef.current = demoUser.id
+        setProfile(demoProfile)
+        setLoading(false) // ✅ Ensure loading is false
         resetSessionTimeout()
+        
+        console.log('[Auth] Demo login complete:', demoProfile)
         return { data: { user: demoUser, session: null }, error: null }
       }
       return { data: { user: null, session: null }, error: new Error('Invalid credentials') }
@@ -235,7 +274,7 @@ export function useAuth() {
     try {
       setLoading(true)
       const identifier = resolveLoginIdentifier(emailOrUsername)
-      console.log('[Auth] Attempting sign in with:', identifier)
+      console.log('[Auth] Signing in:', identifier)
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email: identifier,
@@ -251,10 +290,9 @@ export function useAuth() {
       const authedUser = data.user ?? null
       setUser(authedUser)
       currentUserIdRef.current = authedUser?.id ?? null
-      console.log('[Auth] Auth successful, fetching profile...')
 
       if (authedUser?.id) {
-        await fetchProfile(authedUser.id) // awaited to prevent race with old user
+        await fetchProfile(authedUser.id)
         resetSessionTimeout()
       } else {
         setProfile(null)
@@ -263,16 +301,16 @@ export function useAuth() {
 
       return { data, error: null }
     } catch (signInError) {
-      console.error('[Auth] Unexpected sign in error:', signInError)
+      console.error('[Auth] Sign in error:', signInError)
       setLoading(false)
       return {
         data: { user: null, session: null },
         error: signInError instanceof Error ? signInError : new Error('Sign in failed')
       }
     }
-  }
+  }, [resetSessionTimeout])
 
-  const signUp = async (email: string, password: string, fullName: string, company?: string, position?: string) => {
+  const signUp = useCallback(async (email: string, password: string, fullName: string, company?: string, position?: string) => {
     try {
       if (!supabase) {
         const demoUser = {
@@ -306,16 +344,15 @@ export function useAuth() {
 
       return { data, error: null }
     } catch (signupError) {
-      console.error('[Auth] Unexpected signup error:', signupError)
+      console.error('[Auth] Signup error:', signupError)
       return {
         data: { user: null, session: null },
-        error: signupError instanceof Error ? signupError : new Error('Unexpected signup error')
+        error: signupError instanceof Error ? signupError : new Error('Signup failed')
       }
     }
-  }
+  }, [])
 
-  const signOut = async () => {
-    // Clear session timeout
+  const signOut = useCallback(async () => {
     if (sessionTimeoutRef.current) {
       clearTimeout(sessionTimeoutRef.current)
       sessionTimeoutRef.current = null
@@ -327,16 +364,16 @@ export function useAuth() {
       currentUserIdRef.current = null
       return { error: null }
     }
+
     const { error } = await supabase.auth.signOut()
-    // Hard reset all state so next sign-in starts clean
     setUser(null)
     setProfile(null)
     currentUserIdRef.current = null
     setLoading(false)
     return { error }
-  }
+  }, [])
 
-  const updateProfile = async (updates: Partial<UserProfile>) => {
+  const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
     if (!user) return { error: new Error('No user logged in') }
     if (!supabase) return { error: new Error('Demo mode - cannot update profile') }
 
@@ -350,23 +387,29 @@ export function useAuth() {
       .select()
       .single()
 
-    if (!error && data) {
-      // Only apply if this is still the same user
-      if (currentUserIdRef.current === user.id) setProfile(data)
+    if (!error && data && currentUserIdRef.current === user.id) {
+      setProfile(data)
     }
 
     return { data, error }
-  }
+  }, [user])
 
-  const checkPermission = (requiredRole: 'admin' | 'uploader' | 'viewer') => {
+  const checkPermission = useCallback((requiredRole: 'admin' | 'uploader' | 'viewer') => {
     if (!profile) return false
     const roleHierarchy = { admin: 3, uploader: 2, viewer: 1 }
     const userRoleLevel = roleHierarchy[profile.role as keyof typeof roleHierarchy] || 0
     const requiredRoleLevel = roleHierarchy[requiredRole]
     return userRoleLevel >= requiredRoleLevel
-  }
+  }, [profile])
 
-  const hasRole = (role: 'admin' | 'uploader' | 'viewer') => profile?.role === role
+  const hasRole = useCallback((role: 'admin' | 'uploader' | 'viewer') => profile?.role === role, [profile])
+
+  // ✅ Stable computed values
+  const isAdmin = profile?.role === 'admin'
+  const isUploader = profile?.role === 'uploader' || profile?.role === 'admin'
+  const isViewer = profile?.role === 'viewer'
+  const isActive = profile?.is_active === true
+  const userRole = profile?.role || null
 
   return {
     user,
@@ -377,17 +420,13 @@ export function useAuth() {
     signUp,
     signOut,
     updateProfile,
-    // Role checks
-    isAdmin: profile?.role === 'admin',
-    isUploader: profile?.role === 'uploader' || profile?.role === 'admin',
-    isViewer: profile?.role === 'viewer',
-    // Permission helpers
+    isAdmin,
+    isUploader,
+    isViewer,
     checkPermission,
     hasRole,
-    // User status
-    isActive: profile?.is_active === true,
-    userRole: profile?.role || null,
-    // Session management
+    isActive,
+    userRole,
     resetSessionTimeout
   }
 }

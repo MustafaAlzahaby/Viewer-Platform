@@ -13,14 +13,13 @@ type AppState = 'landing' | 'about' | 'dashboard' | 'viewer' | 'baseline' | 'adm
 
 function App() {
   const { user, profile, loading, signOut, isAdmin, isUploader, checkPermission, hasRole, isActive, userRole, resetSessionTimeout } = useAuth()
-  
+
   const [appState, setAppState] = useState<AppState>('landing')
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const hasRedirectedRef = useRef(false)
   const stateTransitionLockRef = useRef(false)
 
-  // ✅ Memoize auth state to prevent infinite re-renders
   const authState = useMemo(() => ({
     user,
     profile,
@@ -35,40 +34,41 @@ function App() {
     resetSessionTimeout
   }), [user, profile, loading, signOut, isAdmin, isUploader, checkPermission, hasRole, isActive, userRole, resetSessionTimeout])
 
-  // Debug: Log state changes
   useEffect(() => {
-    console.log('[App] State:', { 
+    console.log('[App] State:', {
       appState,
-      loading, 
-      hasUser: !!user, 
-      hasProfile: !!profile, 
+      loading,
+      hasUser: !!user,
+      hasProfile: !!profile,
       role: profile?.role,
       stateTransitionLock: stateTransitionLockRef.current
     })
   }, [appState, loading, user, profile])
 
-  useEffect(() => {
-    if (!loading && user && profile && !hasRedirectedRef.current) {
-      console.log('[App] Auto-redirecting to dashboard')
-      setAppState('dashboard')
-      hasRedirectedRef.current = true
-    }
-  }, [loading, user, profile])
-
   const handleOpenViewer = async (project: Project) => {
     console.log('[App] Opening viewer for project:', project.name)
     setSelectedProject(project)
+
     sessionStorage.setItem('currentProject', JSON.stringify(project))
 
-    // 🔐 Clone session safely to viewer tab
     if (supabase) {
-      const session = await supabase.auth.getSession()
-      if (session.data.session) {
-        sessionStorage.setItem('supabaseSession', JSON.stringify(session.data.session))
+      try {
+        const { data } = await supabase.auth.getSession()
+        if (data.session) {
+          sessionStorage.setItem('supabaseSession', JSON.stringify(data.session))
+          console.log('[App] Session cloned for viewer tab')
+        }
+      } catch (error) {
+        console.error('[App] Failed to clone session:', error)
       }
     }
 
-    window.open('/viewer.html', '_blank')
+    const viewerWindow = window.open('/viewer.html', '_blank')
+
+    setTimeout(() => {
+      sessionStorage.removeItem('supabaseSession')
+      console.log('[App] Temporary session data cleared')
+    }, 5000)
   }
 
   const handleOpenBaseline = (project: Project) => {
@@ -94,24 +94,25 @@ function App() {
   const handleAboutUs = () => setAppState('about')
 
   const handleAuthSuccess = () => {
+    console.log('[App] Auth success, navigating to dashboard')
     setShowAuthModal(false)
+    // Small delay to ensure state is updated
     setTimeout(() => {
       setAppState('dashboard')
       hasRedirectedRef.current = true
     }, 100)
   }
 
-  // ✅ Add state transition guards
   const handleToDashboard = () => {
     if (stateTransitionLockRef.current) {
       console.log('[App] Transition locked, ignoring')
       return
     }
-    
+
     console.log('[App] Admin → Dashboard')
     stateTransitionLockRef.current = true
     setAppState('dashboard')
-    
+
     setTimeout(() => {
       stateTransitionLockRef.current = false
     }, 500)
@@ -122,17 +123,17 @@ function App() {
       console.log('[App] Transition locked, ignoring')
       return
     }
-    
+
     console.log('[App] Dashboard → Admin')
     stateTransitionLockRef.current = true
     setAppState('admin')
-    
+
     setTimeout(() => {
       stateTransitionLockRef.current = false
     }, 500)
   }
 
-  // Show loading only during initial auth
+  // Show loading screen only on initial load
   if (loading && appState === 'landing' && !hasRedirectedRef.current) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
@@ -156,10 +157,18 @@ function App() {
       break
 
     case 'dashboard':
-      if (!user || !profile) {
-        console.warn('[App] No user/profile in dashboard, redirecting to landing')
-        setAppState('landing')
-        break
+      // Only redirect if we're sure there's no user (not loading and no user)
+      if (!loading && !user && !profile) {
+        console.log('[App] No user/profile in dashboard, redirecting to landing')
+        setTimeout(() => setAppState('landing'), 0)
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-white text-lg">Redirecting...</p>
+            </div>
+          </div>
+        )
       }
 
       content = (
