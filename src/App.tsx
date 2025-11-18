@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { LandingPage } from './components/LandingPage'
 import { AboutUs } from './components/AboutUs'
 import { AuthModal } from './components/AuthModal'
@@ -12,27 +12,14 @@ import type { Project } from './lib/supabase'
 type AppState = 'landing' | 'about' | 'dashboard' | 'viewer' | 'baseline' | 'admin'
 
 function App() {
-  const { user, profile, loading, signOut, isAdmin, isUploader, checkPermission, hasRole, isActive, userRole, resetSessionTimeout } = useAuth()
+  const Auth = useAuth()
+  const { user, profile, loading, signOut } = Auth
 
   const [appState, setAppState] = useState<AppState>('landing')
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const hasRedirectedRef = useRef(false)
   const stateTransitionLockRef = useRef(false)
-
-  const authState = useMemo(() => ({
-    user,
-    profile,
-    loading,
-    signOut,
-    isAdmin,
-    isUploader,
-    checkPermission,
-    hasRole,
-    isActive,
-    userRole,
-    resetSessionTimeout
-  }), [user, profile, loading, signOut, isAdmin, isUploader, checkPermission, hasRole, isActive, userRole, resetSessionTimeout])
 
   useEffect(() => {
     console.log('[App] State:', {
@@ -63,7 +50,7 @@ function App() {
       }
     }
 
-    const viewerWindow = window.open('/viewer.html', '_blank')
+    window.open('/viewer.html', '_blank')
 
     setTimeout(() => {
       sessionStorage.removeItem('supabaseSession')
@@ -174,7 +161,7 @@ function App() {
       content = (
         <>
           <Dashboard
-            authState={authState}
+            authState={Auth}
             onOpenViewer={handleOpenViewer}
             onOpenBaseline={handleOpenBaseline}
             onBackToHome={handleBackToLanding}
@@ -203,7 +190,7 @@ function App() {
 
       content = (
         <>
-          <AdminPanel authState={authState} />
+          <AdminPanel authState={Auth} />
           <button
             onClick={handleToDashboard}
             className="fixed bottom-6 right-6 bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-full shadow-lg transition-colors z-50"
@@ -223,7 +210,7 @@ function App() {
         <BaselinePage project={selectedProject} onBack={handleBackToDashboard} />
       ) : (
         <Dashboard
-          authState={authState}
+          authState={Auth}
           onOpenViewer={handleOpenViewer}
           onOpenBaseline={handleOpenBaseline}
           onBackToHome={handleBackToLanding}
@@ -242,6 +229,7 @@ function App() {
         <AuthModal
           isOpen={showAuthModal}
           onClose={() => setShowAuthModal(false)}
+          auth={{ signIn: Auth.signIn, signUp: Auth.signUp }}
           onSuccess={handleAuthSuccess}
         />
       </div>

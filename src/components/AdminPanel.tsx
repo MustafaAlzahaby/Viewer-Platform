@@ -4,13 +4,13 @@ import {
   Users, Shield, Building2, UserCheck, UserX, Crown,
   Eye, Upload, Trash2, Plus, Edit, AlertTriangle, X, Calendar
 } from 'lucide-react'
-import { useAuth } from '../hooks/useAuth'
+import type { UseAuthReturn } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import type { UserProfile, Project } from '../lib/supabase'
 import { DarkModeToggle } from './DarkModeToggle'
 
 interface AdminPanelProps {
-  authState: ReturnType<typeof useAuth>
+  authState: UseAuthReturn
 }
 
 export function AdminPanel({ authState }: AdminPanelProps) {

@@ -7,7 +7,6 @@ export class ViewsManager {
   private views: OBC.Views;
   private world: OBC.World;
   private caster: OBC.SimpleRaycaster;
-  public clipper: OBC.Clipper;
   private panel: HTMLElement | null = null;
   private fragmentManager: any;
 
@@ -33,10 +32,6 @@ export class ViewsManager {
     const casters = components.get(OBC.Raycasters);
     this.caster = casters.get(world);
 
-    this.clipper = components.get(OBC.Clipper);
-    this.clipper.enabled = true;
-    
-
     // ─── Normalize rotation for current and future fragments ──────────────
     const TILT_DEGREES = 0;
     const tiltRad = THREE.MathUtils.degToRad(TILT_DEGREES);
@@ -57,11 +52,11 @@ export class ViewsManager {
 
     // Re-scan after short delay to catch late loaders
     setTimeout(() => {
-      // console.log("Re-scanning for slab elements after delay...");
+      console.log("Re-scanning for slab elements after delay...");
       this.fragmentManager.list.forEach((model: any) => {
         this.identifySlabElements(model);
       });
-      // console.log(`Total slab elements found after delay: ${this.slabElements.size}`);
+      console.log(`Total slab elements found after delay: ${this.slabElements.size}`);
     }, 2000);
   }
 
@@ -72,7 +67,7 @@ export class ViewsManager {
     // Approach 1: regex of modelIds
     try {
       const modelIds = Array.from(this.fragmentManager.list.keys());
-      // console.log("Available model IDs:", modelIds);
+      console.log("Available model IDs:", modelIds);
 
       if (modelIds.length > 0) {
         const modelRegexes = modelIds.map((id) => new RegExp(id));
@@ -83,7 +78,7 @@ export class ViewsManager {
         storeyViewsCreated = true;
       }
     } catch (error) {
-      // console.warn("Approach 1 failed:", error);
+      console.warn("Approach 1 failed:", error);
     }
 
     // Approach 2: known storey name patterns
@@ -102,13 +97,13 @@ export class ViewsManager {
         });
         storeyViewsCreated = true;
       } catch (error) {
-        // console.warn("Approach 2 failed:", error);
+        console.warn("Approach 2 failed:", error);
       }
     }
 
     // Approach 3: manual default views
     if (!storeyViewsCreated) {
-      // console.log("Trying manual storey view creation...");
+      console.log("Trying manual storey view creation...");
       await this.createAdvancedManualStoreyViews();
     }
 
@@ -116,7 +111,7 @@ export class ViewsManager {
     try {
       this.views.createElevations({ combine: true });
     } catch (error) {
-      // console.warn("Could not create elevation views:", error);
+      console.warn("Could not create elevation views:", error);
     }
 
     // UI
@@ -124,7 +119,7 @@ export class ViewsManager {
 
     // Final slab scan after init
     setTimeout(() => {
-      // console.log("Final slab scan after initialization...");
+      console.log("Final slab scan after initialization...");
       this.scanAllFragmentsForSlabs();
     }, 3000);
   }
@@ -133,24 +128,24 @@ export class ViewsManager {
   // Slab detection utilities (kept for diagnostics; coloring uses local IDs)
   // ────────────────────────────────────────────────────────────────────────
   private scanAllFragmentsForSlabs(): void {
-    // console.log("=== COMPREHENSIVE SLAB SCAN ===");
+    console.log("=== COMPREHENSIVE SLAB SCAN ===");
     this.slabElements.clear();
 
     const fragments = this.fragmentManager.list;
     fragments.forEach((fragment: any, modelId: string) => {
-      // console.log(`Scanning fragment ${modelId} for slabs...`);
+      console.log(`Scanning fragment ${modelId} for slabs...`);
       this.identifySlabElements(fragment);
     });
 
-    // console.log(`Total slab elements found: ${this.slabElements.size}`);
+    console.log(`Total slab elements found: ${this.slabElements.size}`);
     if (this.slabElements.size === 0) {
-      // console.log("No slabs found with standard method, trying alternative approaches...");
+      console.log("No slabs found with standard method, trying alternative approaches...");
       this.tryAlternativeSlabDetection();
     }
   }
 
   private tryAlternativeSlabDetection(): void {
-    // console.log("Trying alternative slab detection...");
+    console.log("Trying alternative slab detection...");
     const fragments = this.fragmentManager.list;
     fragments.forEach((fragment: any, modelId: string) => {
       const fragmentObject = fragment.object;
@@ -160,12 +155,12 @@ export class ViewsManager {
         if (child instanceof THREE.Mesh) {
           if (this.isLikelySlabByGeometry(child) || this.isSlabByAnyPattern(child)) {
             this.slabElements.add(child);
-            // console.log(`🔍 Alternative detection found slab: ${child.name || "unnamed"}`);
+            console.log(`🔍 Alternative detection found slab: ${child.name || "unnamed"}`);
           }
         }
       });
     });
-    // console.log(`Alternative detection found ${this.slabElements.size} total slab elements`);
+    console.log(`Alternative detection found ${this.slabElements.size} total slab elements`);
   }
 
   private isLikelySlabByGeometry(mesh: THREE.Mesh): boolean {
@@ -214,7 +209,7 @@ export class ViewsManager {
       const fragmentObject = fragment.object;
       if (!fragmentObject) return;
 
-      // console.log(`Identifying slab elements in fragment: ${fragment.modelId || "unknown"}`);
+      console.log(`Identifying slab elements in fragment: ${fragment.modelId || "unknown"}`);
       let foundSlabs = 0;
       let totalMeshes = 0;
 
@@ -224,15 +219,15 @@ export class ViewsManager {
           if (this.isSlabElement(child) || this.isLikelySlabByGeometry(child)) {
             this.slabElements.add(child);
             foundSlabs++;
-            // console.log(`✓ Identified slab element: ${child.name || "unnamed"} (${(child.material as any)?.type || "unknown material"})`);
+            console.log(`✓ Identified slab element: ${child.name || "unnamed"} (${(child.material as any)?.type || "unknown material"})`);
           }
         }
       });
 
-      // console.log(`Found ${foundSlabs} slab elements out of ${totalMeshes} total meshes in this fragment.`);
-      // console.log(`Total slabs across all fragments: ${this.slabElements.size}`);
+      console.log(`Found ${foundSlabs} slab elements out of ${totalMeshes} total meshes in this fragment.`);
+      console.log(`Total slabs across all fragments: ${this.slabElements.size}`);
     } catch (error) {
-      // console.warn("Error identifying slab elements:", error);
+      console.warn("Error identifying slab elements:", error);
     }
   }
 
@@ -264,9 +259,9 @@ export class ViewsManager {
     const result = nameMatches || typeMatches || materialMatches || hasLevelPattern || hasSlabPattern;
 
     if (result) {
-/*       console.log(
+      console.log(
         `🎯 SLAB DETECTED: "${mesh.name}" - Name:${nameMatches} Type:${typeMatches} Material:${materialMatches} Pattern:${hasLevelPattern || hasSlabPattern}`
-      ); */
+      );
     }
     return result;
   }
@@ -296,7 +291,7 @@ export class ViewsManager {
           result.set(modelId, ids);
         }
       } catch (err) {
-        // console.warn(`getItemsOfCategories failed for model ${modelId}`, err);
+        console.warn(`getItemsOfCategories failed for model ${modelId}`, err);
       }
     }
     return result;
@@ -327,14 +322,14 @@ export class ViewsManager {
           fragment.highlight(localIds, lightGrayMaterialDefinition);
           total += localIds.length;
         } catch (e) {
-          // console.warn(`Highlight failed for model ${modelId}`, e);
+          console.warn(`Highlight failed for model ${modelId}`, e);
         }
       }
 
       this.fragmentManager.core.update(true);
-      // console.log(`✅ Applied light gray highlighting to ${total} slab items`);
+      console.log(`✅ Applied light gray highlighting to ${total} slab items`);
     } catch (error) {
-      // console.error("Error in applySlabHighlighting:", error);
+      console.error("Error in applySlabHighlighting:", error);
     }
   }
 
@@ -342,7 +337,7 @@ export class ViewsManager {
   private async applySlabStyling(): Promise<void> {
     // If for any reason slabs set is empty (mesh-based), still proceed; we use category IDs
     if (this.slabElements.size === 0) {
-      // console.log("No slab meshes recorded; proceeding with category-based highlighting.");
+      console.log("No slab meshes recorded; proceeding with category-based highlighting.");
     }
     await this.applySlabHighlighting();
     this.is2DViewActive = true;
@@ -351,14 +346,14 @@ export class ViewsManager {
   /** Reset highlighting across all models (no direct material restoration needed). */
   private restoreSlabMaterials(): void {
     try {
-      // console.log("Restoring original slab materials (resetHighlight)...");
+      console.log("Restoring original slab materials (resetHighlight)...");
       this.fragmentManager.list.forEach((fragment: any, modelId: string) => {
         if (this.originalSlabMaterials.has(`${modelId}_highlighted`)) {
           try {
             fragment.resetHighlight();
-            // console.log(`✅ Reset highlighting for model: ${modelId}`);
+            console.log(`✅ Reset highlighting for model: ${modelId}`);
           } catch (error) {
-            // console.warn(`Could not reset highlight for model ${modelId}:`, error);
+            console.warn(`Could not reset highlight for model ${modelId}:`, error);
           }
           this.originalSlabMaterials.delete(`${modelId}_highlighted`);
         }
@@ -367,7 +362,7 @@ export class ViewsManager {
       this.fragmentManager.core.update(true);
       this.is2DViewActive = false;
     } catch (error) {
-      // console.warn("Error restoring slab materials:", error);
+      console.warn("Error restoring slab materials:", error);
     }
   }
 
@@ -376,28 +371,28 @@ export class ViewsManager {
   // ────────────────────────────────────────────────────────────────────────
 
   public openView(viewName: string): void {
-    // console.log(`Opening 2D view: ${viewName}`);
+    console.log(`Opening 2D view: ${viewName}`);
 
     // Make sure we have slabs identified (for logs / panel info)
-    // console.log("Rescanning for slabs before opening view...");
+    console.log("Rescanning for slabs before opening view...");
     this.scanAllFragmentsForSlabs();
 
     this.views.open(viewName);
 
     // Apply light gray highlighting with a couple of retries
     setTimeout(async () => {
-      // console.log("Attempting to apply light gray slab styling...");
+      console.log("Attempting to apply light gray slab styling...");
       await this.applySlabStyling();
     }, 200);
 
     setTimeout(async () => {
-      // console.log("Second attempt at styling slabs...");
+      console.log("Second attempt at styling slabs...");
       await this.applySlabStyling();
     }, 800);
 
     setTimeout(async () => {
       if (!this.is2DViewActive) {
-        // console.log("Final attempt: comprehensive slab detection...");
+        console.log("Final attempt: comprehensive slab detection...");
         this.scanAllFragmentsForSlabs();
         await this.applySlabStyling();
       }
@@ -405,7 +400,7 @@ export class ViewsManager {
   }
 
   public closeCurrentView(): void {
-    // console.log("Closing current 2D view and restoring original materials");
+    console.log("Closing current 2D view and restoring original materials");
     this.restoreSlabMaterials();
     this.views.close();
   }
@@ -416,16 +411,16 @@ export class ViewsManager {
 
   private async createAdvancedManualStoreyViews(): Promise<void> {
     try {
-      // console.log("Starting advanced manual storey view creation...");
+      console.log("Starting advanced manual storey view creation...");
 
       const fragments = this.fragmentManager.list;
       if (fragments.size === 0) {
-        // console.warn("No fragments available for manual storey view creation");
+        console.warn("No fragments available for manual storey view creation");
         return;
       }
 
       const [modelId, fragment] = Array.from(fragments.entries())[0];
-      // console.log(`Processing fragment: ${modelId}`);
+      console.log(`Processing fragment: ${modelId}`);
 
       let spatialElements: any[] = [];
 
@@ -438,7 +433,7 @@ export class ViewsManager {
       }
 
       if (spatialElements.length === 0) {
-        // console.log("No spatial elements found, creating default level views...");
+        console.log("No spatial elements found, creating default level views...");
         await this.createDefaultLevelViews(fragment);
         return;
       }
@@ -447,7 +442,7 @@ export class ViewsManager {
         await this.createViewForSpatialElement(element, fragment);
       }
     } catch (error) {
-      // console.error("Error in advanced manual storey view creation:", error);
+      console.error("Error in advanced manual storey view creation:", error);
       await this.createDefaultLevelViews();
     }
   }
@@ -464,9 +459,9 @@ export class ViewsManager {
       } else if (spatialStructure.floors) {
         elements.push(...spatialStructure.floors);
       }
-      // console.log(`Found ${elements.length} spatial elements`);
+      console.log(`Found ${elements.length} spatial elements`);
     } catch (error) {
-      // console.warn("Error extracting spatial elements:", error);
+      console.warn("Error extracting spatial elements:", error);
     }
     return elements;
   }
@@ -481,9 +476,9 @@ export class ViewsManager {
         const spatial = await dataManager.getSpatialElements();
         elements.push(...spatial);
       }
-      // console.log(`Data manager found ${elements.length} elements`);
+      console.log(`Data manager found ${elements.length} elements`);
     } catch (error) {
-      // console.warn("Error extracting from data manager:", error);
+      console.warn("Error extracting from data manager:", error);
     }
     return elements;
   }
@@ -498,9 +493,9 @@ export class ViewsManager {
           elements.push(...typeElements);
         }
       }
-      // console.log(`IFC metadata found ${elements.length} elements`);
+      console.log(`IFC metadata found ${elements.length} elements`);
     } catch (error) {
-      // console.warn("Error extracting from IFC metadata:", error);
+      console.warn("Error extracting from IFC metadata:", error);
     }
     return elements;
   }
@@ -533,14 +528,14 @@ export class ViewsManager {
         },
       });
 
-      // console.log(`Created view: ${name} at elevation ${elevation}`);
+      console.log(`Created view: ${name} at elevation ${elevation}`);
     } catch (error) {
-      // console.warn(`Could not create view for spatial element:`, error);
+      console.warn(`Could not create view for spatial element:`, error);
     }
   }
 
   private async createDefaultLevelViews(fragment?: any): Promise<void> {
-    // console.log("Creating default level views...");
+    console.log("Creating default level views...");
 
     try {
       const defaultLevels = [
@@ -580,13 +575,13 @@ export class ViewsManager {
             },
           });
 
-          // console.log(`Created default view: ${level.name}`);
+          console.log(`Created default view: ${level.name}`);
         } catch (error) {
-          // console.warn(`Failed to create default view ${level.name}:`, error);
+          console.warn(`Failed to create default view ${level.name}:`, error);
         }
       }
     } catch (error) {
-      // console.error("Error creating default level views:", error);
+      console.error("Error creating default level views:", error);
     }
   }
 
@@ -721,33 +716,33 @@ export class ViewsManager {
         material.needsUpdate = true;
       }
     });
-    // console.log(`Set slab opacity to ${clamped} (mesh-based; highlighted slabs use definition)`);
+    console.log(`Set slab opacity to ${clamped} (mesh-based; highlighted slabs use definition)`);
   }
 
   public toggleSlabVisibility(): void {
     this.slabElements.forEach((mesh) => {
       mesh.visible = !mesh.visible;
     });
-    // console.log("Toggled slab visibility (mesh-based)");
+    console.log("Toggled slab visibility (mesh-based)");
   }
 
   public inspectModels(): void {
-    // console.log("=== DETAILED MODEL INSPECTION ===");
+    console.log("=== DETAILED MODEL INSPECTION ===");
 
     const fragments = this.fragmentManager.list;
-    // console.log(`Total fragments: ${fragments.size}`);
-    // console.log(`Total slab elements identified: ${this.slabElements.size}`);
+    console.log(`Total fragments: ${fragments.size}`);
+    console.log(`Total slab elements identified: ${this.slabElements.size}`);
 
-    // console.log("Re-identifying slab elements...");
+    console.log("Re-identifying slab elements...");
     fragments.forEach((fragment: any) => {
       this.identifySlabElements(fragment);
     });
-    // console.log(`After re-identification: ${this.slabElements.size} slab elements`);
+    console.log(`After re-identification: ${this.slabElements.size} slab elements`);
 
     fragments.forEach((fragment: any, modelId: string) => {
-/*       console.log(`\n=== Model ID: ${modelId} ===`);
+      console.log(`\n=== Model ID: ${modelId} ===`);
       console.log("Fragment type:", fragment.constructor.name);
-      console.log("Fragment properties:", Object.keys(fragment)); */
+      console.log("Fragment properties:", Object.keys(fragment));
 
       this.inspectFragmentProperty(fragment, "_dataManager", "Data Manager");
       this.inspectFragmentProperty(fragment, "spatialStructure", "Spatial Structure");
@@ -758,56 +753,56 @@ export class ViewsManager {
       this.tryGetStoreyData(fragment, modelId);
     });
 
-    // console.log("=== END DETAILED INSPECTION ===");
+    console.log("=== END DETAILED INSPECTION ===");
   }
 
   private inspectFragmentProperty(fragment: any, propertyName: string, displayName: string): void {
     try {
       if (fragment[propertyName]) {
-        // console.log(`\n${displayName}:`, typeof fragment[propertyName]);
+        console.log(`\n${displayName}:`, typeof fragment[propertyName]);
         if (typeof fragment[propertyName] === "object") {
-          // console.log(`${displayName} properties:`, Object.keys(fragment[propertyName]));
+          console.log(`${displayName} properties:`, Object.keys(fragment[propertyName]));
           if (propertyName === "_bbox" && fragment[propertyName]) {
             try {
               const bbox = fragment[propertyName];
               if (bbox.min && bbox.max) {
-                // console.log("BBox min:", bbox.min);
-                // console.log("BBox max:", bbox.max);
+                console.log("BBox min:", bbox.min);
+                console.log("BBox max:", bbox.max);
               }
             } catch {
-              // console.log("Could not read bbox details");
+              console.log("Could not read bbox details");
             }
           }
         }
       }
     } catch (error) {
-      // console.log(`Error inspecting ${displayName}:`, error);
+      console.log(`Error inspecting ${displayName}:`, error);
     }
   }
 
   private tryGetStoreyData(fragment: any, modelId: string): void {
-    // console.log(`\n--- Trying to get storey data for ${modelId} ---`);
+    console.log(`\n--- Trying to get storey data for ${modelId} ---`);
 
     const methods = ["getStoreys", "getLevels", "getFloors", "getSpatialElements"];
     for (const method of methods) {
       try {
         if (typeof fragment[method] === "function") {
           const result = fragment[method]();
-          // console.log(`${method}() returned:`, result);
+          console.log(`${method}() returned:`, result);
           if (result && Array.isArray(result)) {
-            // console.log(`${method}() found ${result.length} items`);
+            console.log(`${method}() found ${result.length} items`);
             result.slice(0, 3).forEach((item: any, index: number) => {
-              // console.log(`  Item ${index}:`, item);
+              console.log(`  Item ${index}:`, item);
             });
           }
         }
       } catch (error) {
-        // console.log(`${method}() failed:`, error);
+        console.log(`${method}() failed:`, error);
       }
     }
 
     if (fragment._dataManager) {
-      // console.log("Checking data manager...");
+      console.log("Checking data manager...");
       const dataManager = fragment._dataManager;
       const dmMethods = ["getStoreys", "getLevels", "getSpatialElements", "getAllItems"];
 
@@ -815,40 +810,40 @@ export class ViewsManager {
         try {
           if (typeof dataManager[method] === "function") {
             const result = dataManager[method]();
-            // console.log(`DataManager.${method}():`, result);
+            console.log(`DataManager.${method}():`, result);
           }
         } catch (error) {
-          // console.log(`DataManager.${method}() failed:`, error);
+          console.log(`DataManager.${method}() failed:`, error);
         }
       }
     }
 
     if (fragment._itemsManager) {
-      // console.log("Checking items manager...");
+      console.log("Checking items manager...");
       try {
         const itemsManager = fragment._itemsManager;
         if (itemsManager.groups) {
-          // console.log("Items manager groups:", itemsManager.groups);
+          console.log("Items manager groups:", itemsManager.groups);
         }
         if (itemsManager.list) {
-          // console.log("Items manager list size:", itemsManager.list.size);
+          console.log("Items manager list size:", itemsManager.list.size);
         }
       } catch (error) {
-        // console.log("Items manager check failed:", error);
+        console.log("Items manager check failed:", error);
       }
     }
   }
 
   public listAllMeshes(): void {
-    // console.log("=== LISTING ALL MESHES IN MODEL ===");
+    console.log("=== LISTING ALL MESHES IN MODEL ===");
 
     const fragments = this.fragmentManager.list;
     fragments.forEach((fragment: any, modelId: string) => {
-      // console.log(`\n--- Meshes in fragment: ${modelId} ---`);
+      console.log(`\n--- Meshes in fragment: ${modelId} ---`);
 
       const fragmentObject = fragment.object;
       if (!fragmentObject) {
-        // console.log("No fragment object found");
+        console.log("No fragment object found");
         return;
       }
 
@@ -876,17 +871,17 @@ export class ViewsManager {
           });
 
           if (meshCount <= 20) {
-/*             console.log(
+            console.log(
               `${meshCount}. "${name}" | IFC: "${ifcType}" | Material: "${materialName}" (${materialType}) | Vertices: ${child.geometry?.attributes?.position?.count || 0}`
-            ); */
+            );
           }
         }
       });
 
-      // console.log(`Total meshes found: ${meshCount}`);
+      console.log(`Total meshes found: ${meshCount}`);
       if (meshCount > 20) {
-/*         console.log(`... and ${meshCount - 20} more meshes (see "meshDetails" array)`);
-        console.log("Full mesh details:", meshDetails); */
+        console.log(`... and ${meshCount - 20} more meshes (see "meshDetails" array)`);
+        console.log("Full mesh details:", meshDetails);
       }
 
       const ifcTypes = meshDetails.reduce((acc: any, mesh) => {
@@ -895,9 +890,9 @@ export class ViewsManager {
         acc[type].push(mesh.name);
         return acc;
       }, {});
-      // console.log("Meshes grouped by IFC type:", ifcTypes);
+      console.log("Meshes grouped by IFC type:", ifcTypes);
     });
 
-    // console.log("=== END MESH LISTING ===");
+    console.log("=== END MESH LISTING ===");
   }
 }

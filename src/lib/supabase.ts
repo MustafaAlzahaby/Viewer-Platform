@@ -29,9 +29,9 @@ export interface UserProfile {
   email: string
   full_name: string
   role: 'viewer' | 'uploader' | 'admin'
-  company?: string
-  position?: string
-  avatar_url?: string
+  company?: string | null
+  position?: string | null
+  avatar_url?: string | null
   is_active: boolean
   created_at: string
   updated_at: string

@@ -47,10 +47,8 @@ export class SceneManager {
       color: 0x6528d7,
       transparent: true,
       opacity: 0.5,
-      depthTest: false,
+      depthTest: false, 
     });
-
-
 
     return world;
   }

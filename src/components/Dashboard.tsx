@@ -5,13 +5,13 @@ import {
   Building2, Eye, FileText, Settings, LogOut, User,
   BarChart3, Calendar, Clock, Plus, Trash2, Edit3, Save, X
 } from 'lucide-react'
-import { useAuth } from '../hooks/useAuth'
+import type { UseAuthReturn } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import type { Project, UserProfile } from '../lib/supabase'
 import { DarkModeToggle } from './DarkModeToggle'
 
 interface DashboardProps {
-  authState: ReturnType<typeof useAuth>
+  authState: UseAuthReturn
   onOpenViewer: (project: Project) => void
   onOpenBaseline: (project: Project) => void
   onBackToHome: () => void
@@ -73,6 +73,7 @@ export function Dashboard({ authState, onOpenViewer, onOpenBaseline, onBackToHom
       setLoading(true)
 
       if (!supabase) {
+        console.log('[Dashboard] Demo mode - using static project')
         setProjects([{
           id: 'demo-project',
           name: 'MOC Building Model',
@@ -85,39 +86,58 @@ export function Dashboard({ authState, onOpenViewer, onOpenBaseline, onBackToHom
           updated_at: new Date().toISOString(),
           is_active: true
         } as EditableProject])
+        setLoading(false)
         return
       }
 
       if (!profile?.id) {
+        console.warn('[Dashboard] No profile ID, cannot fetch projects')
         setProjects([])
         setLoading(false)
         return
       }
       
-      let query = supabase.from('projects').select('*')
+      console.log('[Dashboard] Fetching projects from Supabase for user:', profile.id, 'role:', profile.role)
       
-      if (!isAdmin) {
-        const { data: permissions, error: permErr } = await supabase
-          .from('project_permissions')
-          .select('project_id')
-          .eq('user_id', profile!.id)
-        if (permErr) throw permErr
-        
-        const projectIds = (permissions ?? []).map(p => p.project_id) || []
-        if (projectIds.length === 0) {
-          setProjects([])
-          return
+      // Fetch all projects from Supabase - no role-based filtering
+      // All authenticated users should see all active projects
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false })
+      
+      if (error) {
+        console.error('[Dashboard] Supabase query error:', error)
+        console.error('[Dashboard] Error details:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        })
+        // If it's a permission error, show helpful message
+        if (error.code === 'PGRST301' || error.message?.includes('permission') || error.message?.includes('policy')) {
+          console.error('[Dashboard] RLS Policy Error: Non-admin users may need RLS policies to view projects')
+          console.error('[Dashboard] Add this policy in Supabase:')
+          console.error('CREATE POLICY "Allow authenticated users to view projects" ON public.projects FOR SELECT TO authenticated USING (is_active = true);')
         }
-        query = query.in('id', projectIds)
+        throw error
       }
 
-      const { data, error } = await query.order('created_at', { ascending: false })
-      if (error) throw error
-
-      const safe = (data ?? []).filter((p: any) => p.is_active !== false)
-      setProjects(safe as EditableProject[])
+      console.log('[Dashboard] Projects fetched from Supabase:', data?.length || 0, 'total projects')
+      
+      // Filter to only show active projects
+      const activeProjects = (data ?? []).filter((p: any) => p.is_active !== false)
+      console.log('[Dashboard] Active projects after filtering:', activeProjects.length)
+      
+      if (activeProjects.length === 0 && (data?.length || 0) > 0) {
+        console.warn('[Dashboard] All projects are inactive')
+      }
+      
+      setProjects(activeProjects as EditableProject[])
     } catch (error) {
-      console.error('Error fetching projects:', error)
+      console.error('[Dashboard] Error fetching projects:', error)
+      // Don't set empty array on error - let user see there was an issue
+      // But still set empty to prevent UI breaking
       setProjects([])
     } finally {
       setLoading(false)
@@ -143,8 +163,16 @@ export function Dashboard({ authState, onOpenViewer, onOpenBaseline, onBackToHom
   }
 
   const handleSignOut = async () => {
-    await signOut()
-    onBackToHome()
+    try {
+      console.log('[Dashboard] Sign out clicked')
+      const result = await signOut()
+      console.log('[Dashboard] Sign out result:', result)
+      onBackToHome()
+    } catch (error) {
+      console.error('[Dashboard] Sign out error:', error)
+      // Still navigate to home even if signOut fails
+      onBackToHome()
+    }
   }
 
   const handleAddProject = async (e: React.FormEvent) => {
@@ -467,9 +495,14 @@ return (
             )}
             
             <button
-              onClick={handleSignOut}
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                handleSignOut()
+              }}
               className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-transparent hover:bg-gray-200/70 dark:hover:bg-gray-700/70 rounded-lg transition-all duration-300"
               title="Sign Out"
+              type="button"
             >
               <LogOut className="w-5 h-5" />
             </button>

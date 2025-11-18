@@ -22,8 +22,8 @@ interface ColorConfig {
 }
 
 export class HighlightController {
-  public dataProcessor: DataProcessor;
-  public highlighter: Highlighter;
+  private dataProcessor: DataProcessor;
+  private highlighter: Highlighter;
 
   private controlsContainer: HTMLElement | null = null;
   private statusIndicator: HTMLElement | null = null;
@@ -56,24 +56,10 @@ export class HighlightController {
     this.injectHorizontalStyles();
   }
 
-  public async initializeAfterModelLoad(): Promise<void> {
-    console.log("🔄 Initializing params map after model load...");
-    await this.populateHighlightParamsMap();
-    console.log(
-      `✅ Params map populated with ${this.highlighter.highlightParamsToIds.size} entries`
-    );
-  }
-
   /**
    * Initialize the data processor with config and Excel data, and load category data
    */
-  // In your HighlightController.ts file, replace the initialize method with this:
-
-  async initialize(
-    configUrl: string,
-    dataUrl: string,
-    categoryJsonUrl?: string
-  ): Promise<void> {
+  async initialize(configUrl: string, dataUrl: string, categoryJsonUrl?: string): Promise<void> {
     await this.dataProcessor.initialize(configUrl, dataUrl);
 
     // Load color configuration from config.json
@@ -89,13 +75,8 @@ export class HighlightController {
     }
 
     await this.preprocessExcelData();
-
-    // ⚠️ DON'T populate here - models aren't loaded yet!
-    // await this.populateHighlightParamsMap();
-
-    console.log("✅ HighlightController data processing complete");
-    console.log("⏳ Waiting for model load to populate params map...");
   }
+
   /**
    * Load color configuration from config.json
    */
@@ -107,13 +88,13 @@ export class HighlightController {
       }
       const config = await response.json();
       this.colorConfig = config.colorKey || {};
-
+      
       // Also pass color config to highlighter
       await this.highlighter.loadColorConfig(configUrl);
-
-      // console.log("Color configuration loaded successfully");
+      
+      console.log("Color configuration loaded successfully");
     } catch (error) {
-      // console.error("Error loading color configuration:", error);
+      console.error("Error loading color configuration:", error);
       throw error;
     }
   }
@@ -122,11 +103,11 @@ export class HighlightController {
    * Get the primary category key from category data
    */
   private getPrimaryCategoryKey(categories: any): string {
-    if (!categories) return "default";
-
+    if (!categories) return 'default';
+    
     let categoryArray: string[] = [];
-
-    if (typeof categories === "string") {
+    
+    if (typeof categories === 'string') {
       // Handle string format like "[\"ff\"]"
       try {
         const parsed = JSON.parse(categories);
@@ -137,12 +118,12 @@ export class HighlightController {
     } else if (Array.isArray(categories)) {
       categoryArray = categories;
     } else {
-      return "default";
+      return 'default';
     }
 
     // Remove brackets and quotes from category names to match colorKey
-    const cleanCategories = categoryArray.map((cat) =>
-      cat.replace(/^\["?|"?\]$/g, "").replace(/"/g, "")
+    const cleanCategories = categoryArray.map(cat => 
+      cat.replace(/^\["?|"?\]$/g, '').replace(/"/g, '')
     );
 
     // Find the first category that has a color mapping
@@ -153,7 +134,7 @@ export class HighlightController {
     }
 
     // Fallback to first category if no color mapping found
-    return cleanCategories[0] || "default";
+    return cleanCategories[0] || 'default';
   }
 
   /**
@@ -161,7 +142,7 @@ export class HighlightController {
    */
   private getCategoryColor(categories: any): string {
     const categoryKey = this.getPrimaryCategoryKey(categories);
-
+    
     if (this.colorConfig && this.colorConfig[categoryKey]) {
       return this.colorConfig[categoryKey];
     }
@@ -173,39 +154,29 @@ export class HighlightController {
    * Pre-process Excel data and organize into separate data structures with constraints
    */
   private async preprocessExcelData(): Promise<void> {
-    // console.log("Pre-processing Excel data...");
+    console.log("Pre-processing Excel data...");
 
-    const inProgressResults =
-      this.dataProcessor.getResultsByStatus("in-progress");
+    const inProgressResults = this.dataProcessor.getResultsByStatus("in-progress");
     const completedResults = this.dataProcessor.getResultsByStatus("completed");
 
-    const inProgressGroups: ParameterGroup[] = inProgressResults.map(
-      (result) => ({
-        zone: result.zone,
-        level: result.level,
-        category: result.category,
-        originalStatus: "IN_PROGRESS",
-      })
-    );
+    const inProgressGroups: ParameterGroup[] = inProgressResults.map((result) => ({
+      zone: result.zone,
+      level: result.level,
+      category: result.category,
+      originalStatus: "IN_PROGRESS",
+    }));
 
-    const completedGroups: ParameterGroup[] = completedResults.map(
-      (result) => ({
-        zone: result.zone,
-        level: result.level,
-        category: result.category,
-        originalStatus: "COMPLETED",
-      })
-    );
+    const completedGroups: ParameterGroup[] = completedResults.map((result) => ({
+      zone: result.zone,
+      level: result.level,
+      category: result.category,
+      originalStatus: "COMPLETED",
+    }));
 
-    this.processedData = this.applyConstraintsAndOrganize(
-      inProgressGroups,
-      completedGroups
-    );
+    this.processedData = this.applyConstraintsAndOrganize(inProgressGroups, completedGroups);
 
     console.log("Data pre-processing completed:");
-    console.log(
-      `- In Progress: ${this.processedData.inProgress.length} groups`
-    );
+    console.log(`- In Progress: ${this.processedData.inProgress.length} groups`);
     console.log(`- Completed: ${this.processedData.completed.length} groups`);
     console.log(`- Both: ${this.processedData.both.length} groups`);
   }
@@ -233,9 +204,7 @@ export class HighlightController {
       const key = createGroupKey(group);
       if (completedKeys.has(key)) {
         intersectionCount++;
-        if (intersectionCount <= 3) {
-          //console.log(`  Intersection removed from in-progress: ${key}`);
-        }
+        if (intersectionCount <= 3) console.log(`  Intersection removed from in-progress: ${key}`);
       } else {
         result.inProgress.push(group);
       }
@@ -606,13 +575,10 @@ export class HighlightController {
     if (!this.colorConfig) return;
 
     // Get unique categories from current processed data
-    const allCategories = [
-      ...this.processedData.inProgress,
-      ...this.processedData.completed,
-    ];
+    const allCategories = [...this.processedData.inProgress, ...this.processedData.completed];
     const categoryColors = new Set<string>();
 
-    allCategories.forEach((group) => {
+    allCategories.forEach(group => {
       const color = this.getCategoryColor(group.category);
       categoryColors.add(color);
     });
@@ -622,18 +588,18 @@ export class HighlightController {
     if (categoryColors.size > 0) {
       const primaryColor = Array.from(categoryColors)[0];
       this.setUIColors({
-        inProgress: {
-          from: primaryColor,
-          to: primaryColor,
+        inProgress: { 
+          from: primaryColor, 
+          to: primaryColor, 
           accent: primaryColor,
-          shadowAlpha: 0.18,
+          shadowAlpha: 0.18
         },
-        completed: {
-          from: primaryColor,
-          to: primaryColor,
+        completed: { 
+          from: primaryColor, 
+          to: primaryColor, 
           accent: primaryColor,
-          shadowAlpha: 0.15,
-        },
+          shadowAlpha: 0.15
+        }
       });
     }
   }
@@ -644,9 +610,7 @@ export class HighlightController {
   private addHorizontalToggleListeners(): void {
     if (!this.controlsContainer) return;
 
-    const checkboxes = this.controlsContainer.querySelectorAll(
-      ".horizontal-checkbox-input"
-    );
+    const checkboxes = this.controlsContainer.querySelectorAll(".horizontal-checkbox-input");
 
     checkboxes.forEach((checkbox) => {
       checkbox.addEventListener("change", async (event) => {
@@ -691,21 +655,11 @@ export class HighlightController {
 
     if (this.inProgressOn) {
       parts.push("In Progress");
-      tasks.push(
-        this.highlightPreprocessedDataBatched(
-          this.processedData.inProgress,
-          "IN_PROGRESS"
-        )
-      );
+      tasks.push(this.highlightPreprocessedDataBatched(this.processedData.inProgress, "IN_PROGRESS"));
     }
     if (this.completedOn) {
       parts.push("Completed");
-      tasks.push(
-        this.highlightPreprocessedDataBatched(
-          this.processedData.completed,
-          "COMPLETED"
-        )
-      );
+      tasks.push(this.highlightPreprocessedDataBatched(this.processedData.completed, "COMPLETED"));
     }
 
     if (tasks.length === 0) {
@@ -720,17 +674,11 @@ export class HighlightController {
   /**
    * Highlight parameters with their original statuses preserved – BATCHED
    */
-  private async highlightWithOriginalStatusesBatched(
-    parameterGroups: ParameterGroup[]
-  ): Promise<void> {
+  private async highlightWithOriginalStatusesBatched(parameterGroups: ParameterGroup[]): Promise<void> {
     if (!parameterGroups.length) return;
 
-    const inProgressItems = parameterGroups.filter(
-      (g) => g.originalStatus === "IN_PROGRESS"
-    );
-    const completedItems = parameterGroups.filter(
-      (g) => g.originalStatus === "COMPLETED"
-    );
+    const inProgressItems = parameterGroups.filter((g) => g.originalStatus === "IN_PROGRESS");
+    const completedItems = parameterGroups.filter((g) => g.originalStatus === "COMPLETED");
 
     await Promise.all([
       this.highlightPreprocessedDataBatched(inProgressItems, "IN_PROGRESS"),
@@ -751,9 +699,7 @@ export class HighlightController {
     // De-duplicate identical groups
     const seen = new Set<string>();
     const unique = parameterGroups.filter((g) => {
-      const key = `${g.zone}|${g.level}|${JSON.stringify(
-        g.category
-      )}|${progressStatus}`;
+      const key = `${g.zone}|${g.level}|${JSON.stringify(g.category)}|${progressStatus}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -763,12 +709,7 @@ export class HighlightController {
       const slice = unique.slice(i, i + batchSize);
       await Promise.all(
         slice.map((group) =>
-          this.highlighter.highlight(
-            group.zone,
-            [group.level],
-            group.category,
-            progressStatus
-          )
+          this.highlighter.highlight(group.zone, [group.level], group.category, progressStatus)
         )
       );
     }
@@ -780,18 +721,8 @@ export class HighlightController {
 
   /** Set UI checkbox colors from code (so they match your element highlight color exactly). */
   public setUIColors(c: {
-    inProgress?: {
-      from: string;
-      to: string;
-      accent?: string;
-      shadowAlpha?: number;
-    };
-    completed?: {
-      from: string;
-      to: string;
-      accent?: string;
-      shadowAlpha?: number;
-    };
+    inProgress?: { from: string; to: string; accent?: string; shadowAlpha?: number };
+    completed?: { from: string; to: string; accent?: string; shadowAlpha?: number };
   }) {
     const root = document.documentElement;
 
@@ -805,28 +736,11 @@ export class HighlightController {
       root.style.setProperty(`--hc-${prefix}-from`, from);
       root.style.setProperty(`--hc-${prefix}-to`, to);
       root.style.setProperty(`--hc-${prefix}-accent`, accent ?? to);
-      root.style.setProperty(
-        `--hc-${prefix}-shadow`,
-        this.hexToRgba(accent ?? to, shadowAlpha)
-      );
+      root.style.setProperty(`--hc-${prefix}-shadow`, this.hexToRgba(accent ?? to, shadowAlpha));
     };
 
-    if (c.inProgress)
-      setGroup(
-        "inprogress",
-        c.inProgress.from,
-        c.inProgress.to,
-        c.inProgress.accent,
-        c.inProgress.shadowAlpha
-      );
-    if (c.completed)
-      setGroup(
-        "completed",
-        c.completed.from,
-        c.completed.to,
-        c.completed.accent,
-        c.completed.shadowAlpha
-      );
+    if (c.inProgress) setGroup("inprogress", c.inProgress.from, c.inProgress.to, c.inProgress.accent, c.inProgress.shadowAlpha);
+    if (c.completed) setGroup("completed", c.completed.from, c.completed.to, c.completed.accent, c.completed.shadowAlpha);
   }
 
   /** Tiny helper: convert #rrggbb to rgba(r,g,b,a) string */
@@ -846,27 +760,14 @@ export class HighlightController {
   private async handleModeChange(
     mode: "model" | "in-progress" | "completed" | "both"
   ): Promise<void> {
-    if (mode === "model") {
-      this.inProgressOn = false;
-      this.completedOn = false;
-    } else if (mode === "in-progress") {
-      this.inProgressOn = true;
-      this.completedOn = false;
-    } else if (mode === "completed") {
-      this.inProgressOn = false;
-      this.completedOn = true;
-    } else if (mode === "both") {
-      this.inProgressOn = true;
-      this.completedOn = true;
-    }
+    if (mode === "model")       { this.inProgressOn = false; this.completedOn = false; }
+    else if (mode === "in-progress") { this.inProgressOn = true;  this.completedOn = false; }
+    else if (mode === "completed")   { this.inProgressOn = false; this.completedOn = true; }
+    else if (mode === "both")        { this.inProgressOn = true;  this.completedOn = true; }
 
     if (this.controlsContainer) {
-      const ip = this.controlsContainer.querySelector(
-        '[data-highlight="in-progress"]'
-      ) as HTMLInputElement | null;
-      const cp = this.controlsContainer.querySelector(
-        '[data-highlight="completed"]'
-      ) as HTMLInputElement | null;
+      const ip = this.controlsContainer.querySelector('[data-highlight="in-progress"]') as HTMLInputElement | null;
+      const cp = this.controlsContainer.querySelector('[data-highlight="completed"]') as HTMLInputElement | null;
       if (ip) ip.checked = this.inProgressOn;
       if (cp) cp.checked = this.completedOn;
     }
@@ -878,9 +779,7 @@ export class HighlightController {
     await this.applyHighlightsFromToggles();
   }
 
-  public async setMode(
-    mode: "model" | "in-progress" | "completed" | "both"
-  ): Promise<void> {
+  public async setMode(mode: "model" | "in-progress" | "completed" | "both"): Promise<void> {
     await this.handleModeChange(mode);
   }
 
@@ -898,21 +797,13 @@ export class HighlightController {
   public debugDataProcessing(): void {
     const rawInProgress = this.dataProcessor.getResultsByStatus("in-progress");
     const rawCompleted = this.dataProcessor.getResultsByStatus("completed");
-    console.log(
-      `Raw in-progress: ${rawInProgress.length}, Raw completed: ${rawCompleted.length}`
-    );
-    console.log(
-      `Processed in-progress: ${this.processedData.inProgress.length}`
-    );
+    console.log(`Raw in-progress: ${rawInProgress.length}, Raw completed: ${rawCompleted.length}`);
+    console.log(`Processed in-progress: ${this.processedData.inProgress.length}`);
     console.log(`Processed completed: ${this.processedData.completed.length}`);
     console.log(`Processed both: ${this.processedData.both.length}`);
   }
 
-  public getDataStatistics(): {
-    inProgress: number;
-    completed: number;
-    both: number;
-  } {
+  public getDataStatistics(): { inProgress: number; completed: number; both: number } {
     return {
       inProgress: this.processedData.inProgress.length,
       completed: this.processedData.completed.length,
@@ -922,23 +813,20 @@ export class HighlightController {
 
   public async refreshProcessedData(): Promise<void> {
     await this.preprocessExcelData();
-
-    // Re-populate the highlightParamsToIds map after data refresh
-    await this.populateHighlightParamsMap();
-
     this.highlighter.resetHighlight();
+    
+    // Update UI colors when data refreshes
     this.updateUIColorsFromData();
+    
     await this.applyHighlightsFromToggles();
   }
 
   public toggleControls(visible: boolean): void {
-    if (this.controlsContainer)
-      this.controlsContainer.style.display = visible ? "block" : "none";
-    if (this.statusIndicator)
-      this.statusIndicator.style.display = visible ? "block" : "none";
+    if (this.controlsContainer) this.controlsContainer.style.display = visible ? "block" : "none";
+    if (this.statusIndicator)   this.statusIndicator.style.display   = visible ? "block" : "none";
   }
 
-  public updateStatusIndicator(text: string): void {
+  private updateStatusIndicator(text: string): void {
     if (!this.statusIndicator) return;
 
     if (this.statusTimer) {
@@ -954,8 +842,7 @@ export class HighlightController {
       if (this.statusIndicator) {
         this.statusIndicator.style.opacity = "0";
         setTimeout(() => {
-          if (this.statusIndicator)
-            this.statusIndicator.style.visibility = "hidden";
+          if (this.statusIndicator) this.statusIndicator.style.visibility = "hidden";
         }, 250);
       }
       this.statusTimer = null;
@@ -1010,204 +897,5 @@ export class HighlightController {
     this.inProgressOn = false;
     this.completedOn = false;
     this.colorConfig = null;
-  }
-
-  // Add this method to your HighlightController class
-
-  /**
-   * Pre-populate the highlightParamsToIds map during initialization
-   */
-  private async populateHighlightParamsMap(): Promise<void> {
-    console.log("Pre-populating highlightParamsToIds map...");
-
-    // Clear existing map
-    this.highlighter.clearParamsMap();
-
-    // Process in-progress items
-    if (this.processedData.inProgress.length > 0) {
-      await this.populateParamsForGroups(
-        this.processedData.inProgress,
-        "IN_PROGRESS"
-      );
-    }
-
-    // Process completed items
-    if (this.processedData.completed.length > 0) {
-      await this.populateParamsForGroups(
-        this.processedData.completed,
-        "COMPLETED"
-      );
-    }
-
-    console.log(
-      `highlightParamsToIds map populated with ${
-        this.highlighter.getUniqueParamKeys().length
-      } unique parameter sets`
-    );
-  }
-
-  /**
-   * Helper method to populate params for a group of parameter groups
-   */
-  private async populateParamsForGroups(
-    parameterGroups: ParameterGroup[],
-    progressStatus: "IN_PROGRESS" | "COMPLETED"
-  ): Promise<void> {
-    // Group by unique combinations to avoid duplicates
-    const uniqueGroups = new Map<string, ParameterGroup>();
-
-    parameterGroups.forEach((group) => {
-      const key = `${group.zone}|${group.level}|${JSON.stringify(
-        group.category
-      )}`;
-      uniqueGroups.set(key, group);
-    });
-
-    // Process each unique group
-    for (const group of uniqueGroups.values()) {
-      await this.populateParamsForSingleGroup(group, progressStatus);
-    }
-  }
-
-  /**
-   * Populate params for a single parameter group
-   */
-  private async populateParamsForSingleGroup(
-    group: ParameterGroup,
-    progressStatus: "IN_PROGRESS" | "COMPLETED"
-  ): Promise<void> {
-    try {
-      // Get the items that would be highlighted for this group
-      const itemsToHighlight = await this.getItemsForGroup(group);
-
-      console.log(
-        `🔍 Group ${group.zone}|${group.level}: Found ${itemsToHighlight.size} models with items`
-      );
-
-      if (itemsToHighlight.size === 0) {
-        console.log(`⚠️ No items found for group ${group.zone}|${group.level}`);
-        return;
-      }
-
-      // Create the params key (matching the logic in Highlighter.ts)
-      const categoryArray = Array.isArray(group.category)
-        ? group.category
-        : typeof group.category === "string"
-        ? [group.category]
-        : [];
-
-      const params = {
-        zone: group.zone || "",
-        level: group.level || "",
-        category: [...categoryArray].sort(),
-        status: progressStatus,
-      };
-
-      const paramsKey = JSON.stringify(params);
-
-      // Collect all local IDs for this params combination
-      const allLocalIds: number[] = [];
-      for (const [modelId, localIds] of itemsToHighlight) {
-        allLocalIds.push(...Array.from(localIds));
-      }
-
-      console.log(
-        `✅ Storing ${
-          allLocalIds.length
-        } localIds for params: ${paramsKey.substring(0, 100)}...`
-      );
-
-      // Store in the highlighter's map
-      if (allLocalIds.length > 0) {
-        if (this.highlighter.highlightParamsToIds.has(paramsKey)) {
-          const existingIds =
-            this.highlighter.highlightParamsToIds.get(paramsKey)!;
-          const mergedIds = [...new Set([...existingIds, ...allLocalIds])];
-          this.highlighter.highlightParamsToIds.set(paramsKey, mergedIds);
-        } else {
-          this.highlighter.highlightParamsToIds.set(paramsKey, allLocalIds);
-        }
-      }
-    } catch (error) {
-      console.warn(
-        `❌ Failed to populate params for group ${group.zone}|${group.level}:`,
-        error
-      );
-    }
-  }
-  /**
-   * Get items that would be highlighted for a specific parameter group
-   * (This uses the public methods from Highlighter without actually highlighting)
-   */
-  private async getItemsForGroup(
-    group: ParameterGroup
-  ): Promise<Map<string, Set<number>>> {
-    const categoryArray = Array.isArray(group.category)
-      ? group.category
-      : typeof group.category === "string"
-      ? [group.category]
-      : [];
-
-    // ⭐ FIX: Parse level if it's a JSON string array like '["Level 01"]'
-    let levels: string[] = [];
-    if (group.level) {
-      if (typeof group.level === "string" && group.level.startsWith("[")) {
-        // It's a JSON string array
-        try {
-          const parsed = JSON.parse(group.level);
-          levels = Array.isArray(parsed) ? parsed : [group.level];
-        } catch {
-          levels = [group.level];
-        }
-      } else if (Array.isArray(group.level)) {
-        levels = group.level;
-      } else {
-        levels = [group.level];
-      }
-    }
-
-    console.log(
-      `🔧 getItemsForGroup - zone: ${group.zone}, parsed levels:`,
-      levels,
-      `categories:`,
-      categoryArray
-    );
-
-    let itemsToHighlight = new Map<string, Set<number>>();
-
-    if (categoryArray.length > 0 && levels.length > 0) {
-      // Get intersection of categories and levels using public highlighter methods
-      const categoryItems = await this.highlighter.getItemsByCategoryFromJson(
-        categoryArray,
-        group.zone
-      );
-      const levelItems = await this.highlighter.getItemsByLevel(
-        levels,
-        group.zone
-      );
-
-      console.log(
-        `   📊 Found ${categoryItems.size} models with category items, ${levelItems.size} with level items`
-      );
-
-      itemsToHighlight = this.highlighter.getIntersection(
-        categoryItems,
-        levelItems
-      );
-    } else if (categoryArray.length > 0) {
-      // Get items by categories only
-      itemsToHighlight = await this.highlighter.getItemsByCategoryFromJson(
-        categoryArray,
-        group.zone
-      );
-    } else if (levels.length > 0) {
-      // Get items by levels only
-      itemsToHighlight = await this.highlighter.getItemsByLevel(
-        levels,
-        group.zone
-      );
-    }
-
-    return itemsToHighlight;
   }
 }

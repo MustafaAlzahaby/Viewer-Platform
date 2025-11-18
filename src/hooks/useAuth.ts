@@ -117,7 +117,7 @@ export function useAuth() {
         currentUserIdRef.current = nextUser?.id ?? null
 
         if (nextUser) {
-          await fetchProfile(nextUser.id)
+          await fetchProfile(nextUser)
           if (unsubscribed) return
           resetSessionTimeout()
         }
@@ -136,7 +136,7 @@ export function useAuth() {
             currentUserIdRef.current = u?.id ?? null
 
             if (u) {
-              await fetchProfile(u.id)
+              await fetchProfile(u)
               resetSessionTimeout()
             } else {
               setProfile(null)
@@ -172,12 +172,58 @@ export function useAuth() {
     }
   }, []) // ✅ Empty deps - resetSessionTimeout is NOT a dependency
 
-  const fetchProfile = async (userId: string) => {
+  const buildFallbackProfile = useCallback((userObj: User, overrides?: Partial<UserProfile>): UserProfile => {
+    const now = new Date().toISOString()
+    return {
+      id: userObj.id,
+      email: userObj.email ?? overrides?.email ?? '',
+      full_name:
+        overrides?.full_name ??
+        (userObj.user_metadata?.full_name as string | undefined) ??
+        userObj.email?.split('@')[0] ??
+        'Unnamed User',
+      role: (overrides?.role as UserProfile['role']) ?? 'viewer',
+      company: overrides?.company ?? (userObj.user_metadata?.company as string | null) ?? null,
+      position: overrides?.position ?? (userObj.user_metadata?.position as string | null) ?? null,
+      avatar_url: overrides?.avatar_url ?? (userObj.user_metadata?.avatar_url as string | null) ?? null,
+      is_active: overrides?.is_active ?? true,
+      created_at: overrides?.created_at ?? userObj.created_at ?? now,
+      updated_at: now
+    }
+  }, [])
+
+  const ensureProfile = useCallback(async (userObj: User, overrides?: Partial<UserProfile>) => {
+    if (!supabase || !userObj?.id) return null
+
+    const payload = buildFallbackProfile(userObj, overrides)
+    console.log('[Auth] Ensuring profile exists for', payload.email || payload.id)
+
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .upsert(payload, { onConflict: 'id' })
+      .select('*')
+      .single()
+
+    if (error) throw error
+    console.log('[Auth] Profile ensured for', payload.email || payload.id)
+    return data as UserProfile
+  }, [buildFallbackProfile])
+
+  const fetchProfile = async (userObj: User | null, overrides?: Partial<UserProfile>) => {
+    const userId = userObj?.id
     try {
       if (!supabase) {
         console.log('[Auth] Demo mode - skipping profile fetch')
         return
       }
+
+      if (!userId) {
+        setProfile(null)
+        setLoading(false)
+        return
+      }
+
+      console.log('[Auth] Fetching profile for', userId)
 
       const { data, error } = await supabase
         .from('user_profiles')
@@ -191,20 +237,31 @@ export function useAuth() {
       }
 
       if (error) {
-        console.warn('[Auth] fetchProfile error:', error.message)
+        console.warn('[Auth] fetchProfile select error:', error.message)
+      }
+
+      console.log('[Auth] fetchProfile select result', data ? 'found row' : 'no row')
+
+      let nextProfile = data as UserProfile | null
+
+      if (!nextProfile) {
+        console.warn('[Auth] No profile row found — creating one')
+        try {
+          nextProfile = await ensureProfile(userObj, overrides)
+        } catch (creationError) {
+          console.error('[Auth] Failed to create profile row:', creationError)
+          nextProfile = buildFallbackProfile(userObj, overrides)
+          console.warn('[Auth] Using fallback profile for session — data will not persist')
+        }
+      }
+
+      if (!nextProfile) {
         setProfile(null)
         setLoading(false)
         return
       }
 
-      if (!data) {
-        console.warn('[Auth] No profile row found')
-        setProfile(null)
-        setLoading(false)
-        return
-      }
-
-      if (!data.is_active) {
+      if (!nextProfile.is_active) {
         console.warn('[Auth] User deactivated — signing out')
         try {
           await supabase.auth.signOut()
@@ -218,11 +275,17 @@ export function useAuth() {
         return
       }
 
-      setProfile(data)
-      console.log(`[Auth] Profile loaded: ${data.full_name} (${data.role})`)
+      setProfile(nextProfile)
+      console.log(`[Auth] Profile loaded: ${nextProfile.full_name} (${nextProfile.role})`)
     } catch (e) {
       console.warn('[Auth] fetchProfile error:', e instanceof Error ? e.message : 'Unknown')
-      setProfile(null)
+      if (userObj) {
+        const fallbackProfile = buildFallbackProfile(userObj, overrides)
+        setProfile(fallbackProfile)
+        console.warn('[Auth] Using fallback profile due to fetch failure')
+      } else {
+        setProfile(null)
+      }
     } finally {
       if (currentUserIdRef.current === userId) setLoading(false)
     }
@@ -292,7 +355,7 @@ export function useAuth() {
       currentUserIdRef.current = authedUser?.id ?? null
 
       if (authedUser?.id) {
-        await fetchProfile(authedUser.id)
+        await fetchProfile(authedUser)
         resetSessionTimeout()
       } else {
         setProfile(null)
@@ -340,6 +403,18 @@ export function useAuth() {
       if (error) {
         console.error('[Auth] Signup error:', error)
         return { data, error }
+      }
+
+      if (data?.user) {
+        try {
+          await ensureProfile(data.user, {
+            full_name: fullName.trim(),
+            company: company?.trim() || null,
+            position: position?.trim() || null
+          })
+        } catch (profileError) {
+          console.error('[Auth] Failed to ensure profile after signup:', profileError)
+        }
       }
 
       return { data, error: null }
@@ -430,3 +505,5 @@ export function useAuth() {
     resetSessionTimeout
   }
 }
+
+export type UseAuthReturn = ReturnType<typeof useAuth>

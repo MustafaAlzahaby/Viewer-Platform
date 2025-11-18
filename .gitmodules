@@ -1,0 +1,4 @@
+[submodule "viewer-src"]
+	path = viewer-src
+	url = https://github.com/MustafaAlzahaby/RME-RT-Viewer.git
+	branch = fragment2.0

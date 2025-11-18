@@ -10,6 +10,13 @@ interface ColorConfig {
   [key: string]: string;
 }
 
+interface HighlightParams {
+  zone?: string;
+  level?: string;
+  category?: string[];
+  status?: "IN_PROGRESS" | "COMPLETED";
+}
+
 export class Highlighter {
   private modelManager: ModelManager;
   private highlightedItems = new Map<string, Set<number>>(); // modelId -> Set of localIds
@@ -17,9 +24,25 @@ export class Highlighter {
   private categoryData: GroupedData | null = null;
   private colorConfig: ColorConfig | null = null;
 
+  // Changed to use string keys instead of objects for uniqueness
+  public highlightParamsToIds = new Map<string, number[]>();
+
   constructor(modelManager: ModelManager, hider: HiderPanel) {
     this.modelManager = modelManager;
     this.hider = hider;
+  }
+
+  /**
+   * Create a unique string key from highlight parameters
+   */
+  private createParamsKey(params: HighlightParams): string {
+    const sortedCategories = params.category ? [...params.category].sort() : [];
+    return JSON.stringify({
+      zone: params.zone || "",
+      level: params.level || "",
+      category: sortedCategories,
+      status: params.status || ""
+    });
   }
 
   /**
@@ -34,9 +57,9 @@ export class Highlighter {
         );
       }
       this.categoryData = await response.json();
-      console.log("Category data loaded successfully");
+      // console.log("Category data loaded successfully");
     } catch (error) {
-      console.error("Error loading category data:", error);
+      // console.error("Error loading category data:", error);
       throw error;
     }
   }
@@ -48,15 +71,13 @@ export class Highlighter {
     try {
       const response = await fetch(configUrl);
       if (!response.ok) {
-        throw new Error(
-          `Failed to fetch color config: ${response.statusText}`
-        );
+        throw new Error(`Failed to fetch color config: ${response.statusText}`);
       }
       const config = await response.json();
       this.colorConfig = config.colorKey || {};
-      console.log("Color configuration loaded successfully");
+      // console.log("Color configuration loaded successfully");
     } catch (error) {
-      console.error("Error loading color configuration:", error);
+      // console.error("Error loading color configuration:", error);
       throw error;
     }
   }
@@ -66,12 +87,12 @@ export class Highlighter {
    */
   private getPrimaryCategoryKey(categories: string[]): string {
     if (!categories || categories.length === 0) {
-      return 'default';
+      return "default";
     }
 
     // Remove brackets and quotes from category names to match colorKey
-    const cleanCategories = categories.map(cat => 
-      cat.replace(/^\["?|"?\]$/g, '').replace(/"/g, '')
+    const cleanCategories = categories.map((cat) =>
+      cat.replace(/^\["?|"?\]$/g, "").replace(/"/g, "")
     );
 
     // Find the first category that has a color mapping
@@ -82,17 +103,20 @@ export class Highlighter {
     }
 
     // Fallback to first category if no color mapping found
-    return cleanCategories[0] || 'default';
+    return cleanCategories[0] || "default";
   }
 
   /**
    * Get color for a category with appropriate opacity based on progress status
    */
-  private getCategoryColor(categories: string[], progressStatus?: 'IN_PROGRESS' | 'COMPLETED'): THREE.Color {
+  private getCategoryColor(
+    categories: string[],
+    progressStatus?: "IN_PROGRESS" | "COMPLETED"
+  ): THREE.Color {
     const categoryKey = this.getPrimaryCategoryKey(categories);
-    
+
     let baseColor = "#87CEEB"; // Default sky blue
-    
+
     if (this.colorConfig && this.colorConfig[categoryKey]) {
       baseColor = this.colorConfig[categoryKey];
     }
@@ -103,164 +127,266 @@ export class Highlighter {
   /**
    * Get opacity based on progress status
    */
-  private getOpacityForStatus(progressStatus?: 'IN_PROGRESS' | 'COMPLETED'): number {
-    if (progressStatus === 'COMPLETED') {
+  private getOpacityForStatus(
+    progressStatus?: "IN_PROGRESS" | "COMPLETED"
+  ): number {
+    if (progressStatus === "COMPLETED") {
       return 1; // Full opacity for completed
-    } else if (progressStatus === 'IN_PROGRESS') {
+    } else if (progressStatus === "IN_PROGRESS") {
       return 0.2; // Reduced opacity for in progress
     }
     return 0.6; // Default opacity
   }
 
 public async highlight(
-  modelId?: string,
-  levels: string[] = [],
-  categories: string[] = [],
-  progressStatus?: 'IN_PROGRESS' | 'COMPLETED'
-): Promise<void> {
-  console.log(`Highlight called with: modelId=${modelId}, levels=[${levels.join(', ')}], categories=[${categories.join(', ')}], status=${progressStatus}`);
+    modelId?: string,
+    levels: string[] = [],
+    categories: string[] = [],
+    progressStatus?: "IN_PROGRESS" | "COMPLETED"
+  ): Promise<void> {
+    // Parse and flatten levels - handle both JSON strings and regular arrays
+    const parsedLevels = levels.map(level => {
+      if (typeof level === 'string' && level.startsWith('[')) {
+        try {
+          return JSON.parse(level);
+        } catch {
+          return level;
+        }
+      }
+      return level;
+    });
+    const flattenedLevels = parsedLevels.flat(Infinity) as string[];
+    
+    // Parse and flatten categories - handle both JSON strings and regular arrays
+    const parsedCategories = categories.map(cat => {
+      if (typeof cat === 'string' && cat.startsWith('[')) {
+        try {
+          return JSON.parse(cat);
+        } catch {
+          return cat;
+        }
+      }
+      return cat;
+    });
+    const flattenedCategories = parsedCategories.flat(Infinity) as string[];
+    
+    console.log(
+      `Highlight called with: modelId=${modelId}, levels=[${flattenedLevels.join(", ")}], categories=[${flattenedCategories.join(", ")}], status=${progressStatus}`
+    );
 
-  // If modelId is specified, check if it exists in fragment manager
-  if (modelId) {
-    const model = this.modelManager.fragmentManager.list.get(modelId);
-    if (!model) {
-      console.log(`Model ${modelId} not loaded, skipping highlight`);
+    // If modelId is specified, check if it exists in fragment manager
+    if (modelId) {
+      const model = this.modelManager.fragmentManager.list.get(modelId);
+      if (!model) {
+        console.log(`Model ${modelId} not loaded, skipping highlight`);
+        return;
+      }
+    }
+
+    let itemsToHighlight = new Map<string, Set<number>>();
+
+    if (flattenedCategories.length > 0 && flattenedLevels.length > 0) {
+      console.log("Getting intersection of categories and levels");
+      const categoryItems = await this.getItemsByCategoryFromJson(
+        flattenedCategories,
+        modelId
+      );
+      const levelItems = await this.getItemsByLevel(flattenedLevels, modelId);
+      itemsToHighlight = await this.getIntersection(categoryItems, levelItems);
+      console.log("Intersection result:", itemsToHighlight);
+    } else if (flattenedCategories.length > 0) {
+      console.log("Getting items by categories only");
+      itemsToHighlight = await this.getItemsByCategoryFromJson(
+        flattenedCategories,
+        modelId
+      );
+    } else if (flattenedLevels.length > 0) {
+      console.log("Getting items by levels only");
+      itemsToHighlight = await this.getItemsByLevel(flattenedLevels, modelId);
+    }
+
+    if (itemsToHighlight.size === 0) {
       return;
     }
-  }
 
-  let itemsToHighlight = new Map<string, Set<number>>();
+    console.log(`Items to highlight:`, itemsToHighlight);
 
-  if (categories.length > 0 && levels.length > 0) {
-    console.log('Getting intersection of categories and levels');
-    const categoryItems = await this.getItemsByCategoryFromJson(categories, modelId);
-    const levelItems = await this.getItemsByLevel(levels, modelId);
-    itemsToHighlight = this.getIntersection(categoryItems, levelItems);
-    console.log('Intersection result:', itemsToHighlight);
-  } else if (categories.length > 0) {
-    console.log('Getting items by categories only');
-    itemsToHighlight = await this.getItemsByCategoryFromJson(categories, modelId);
-  } else if (levels.length > 0) {
-    console.log('Getting items by levels only');
-    itemsToHighlight = await this.getItemsByLevel(levels, modelId);
-  }
+    // Get category-based color and opacity
+    const categoryColor = this.getCategoryColor(flattenedCategories, progressStatus);
+    const opacity = this.getOpacityForStatus(progressStatus);
 
-  if (itemsToHighlight.size === 0) {
-    return;
-  }
+    const materialDefinition = {
+      color: categoryColor,
+      opacity: opacity,
+      transparent: true,
+      renderedFaces: 0,
+    };
 
-  console.log(`Items to highlight:`, itemsToHighlight);
+    console.log(
+      `Using color: ${categoryColor.getHexString()}, opacity: ${opacity}, for categories: [${flattenedCategories.join(
+        ", "
+      )}], status: ${progressStatus}`
+    );
 
-  // Get category-based color and opacity
-  const categoryColor = this.getCategoryColor(categories, progressStatus);
-  const opacity = this.getOpacityForStatus(progressStatus);
+    // Highlight items in each model and store params
+    for (const [targetModelId, localIds] of itemsToHighlight) {
+      const model = this.modelManager.fragmentManager.list.get(targetModelId);
+      if (!model) {
+        continue;
+      }
 
-  const materialDefinition = {
-    color: categoryColor,
-    opacity: opacity,
-    transparent: true,
-    renderedFaces: 0,
-  };
+      const localIdsArray = Array.from(localIds);
+      console.log(
+        `Highlighting ${localIdsArray.length} items in model ${targetModelId}`
+      );
 
-  console.log(`Using color: ${categoryColor.getHexString()}, opacity: ${opacity}, for categories: [${categories.join(', ')}], status: ${progressStatus}`);
+      try {
+        model.highlight(localIdsArray, materialDefinition);
+        this.modelManager.fragmentManager.core.update(true);
+        console.log(
+          `Successfully highlighted ${localIdsArray.length} items in model ${targetModelId}`
+        );
+        this.highlightedItems.set(targetModelId, localIds);
 
-  // Highlight items in each model
-  for (const [targetModelId, localIds] of itemsToHighlight) {
-    const model = this.modelManager.fragmentManager.list.get(targetModelId);
-    if (!model) {
-      continue;
+        // Store params for each level separately using the CLEANED flattened values
+        for (const level of flattenedLevels) {
+          const params: HighlightParams = {
+            zone: targetModelId,
+            level: level, // Use cleaned level from flattenedLevels
+            category: flattenedCategories, // Use cleaned categories from flattenedCategories
+            status: progressStatus,
+          };
+          
+          const paramsKey = this.createParamsKey(params);
+          
+          // Check if key already exists and merge if needed
+          if (this.highlightParamsToIds.has(paramsKey)) {
+            const existingIds = this.highlightParamsToIds.get(paramsKey)!;
+            const mergedIds = [...new Set([...existingIds, ...localIdsArray])];
+            this.highlightParamsToIds.set(paramsKey, mergedIds);
+          } else {
+            this.highlightParamsToIds.set(paramsKey, localIdsArray);
+          }
+        }
+        
+        console.log(`Stored params for model ${targetModelId}:`, {
+          levels: flattenedLevels,
+          categories: flattenedCategories,
+          status: progressStatus
+        });
+      } catch (error) {
+        continue;
+      }
     }
 
-    const localIdsArray = Array.from(localIds);
-    console.log(`Highlighting ${localIdsArray.length} items in model ${targetModelId}`);
-    
+    console.log("Highlighting completed");
+    console.log('Stored params:', Array.from(this.highlightParamsToIds.entries()));
+  }
+
+  /**
+   * Get all unique highlight parameter keys
+   */
+  public getUniqueParamKeys(): string[] {
+    return Array.from(this.highlightParamsToIds.keys());
+  }
+
+  /**
+   * Get highlight parameters object from key
+   */
+  public getParamsFromKey(key: string): HighlightParams | null {
     try {
-      model.highlight(localIdsArray, materialDefinition);
-      this.modelManager.fragmentManager.core.update(true);
-      console.log(`Successfully highlighted ${localIdsArray.length} items in model ${targetModelId}`);
-      this.highlightedItems.set(targetModelId, localIds);
-    } catch (error) {
-      continue;
+      return JSON.parse(key) as HighlightParams;
+    } catch {
+      return null;
     }
   }
 
-  console.log('Highlighting completed');
-}
+  /**
+   * Clear the highlight parameters map
+   */
+  public clearParamsMap(): void {
+    this.highlightParamsToIds.clear();
+  }
 
   /**
    * Get items by category from external JSON file
    */
-private async getItemsByCategoryFromJson(
-  categories: string[],
-  targetModelId?: string
-): Promise<Map<string, Set<number>>> {
-  if (!this.categoryData) {
-    throw new Error('Category data not loaded. Call loadCategoryData() first.');
-  }
-
-  console.log(`Getting items for categories: ${categories.join(', ')}`);
-  const itemsMap = new Map<string, Set<number>>();
-
-  for (const category of categories) {
-    const guidList = this.categoryData[category];
-    if (!guidList || guidList.length === 0) {
-      continue;
+  public async getItemsByCategoryFromJson(
+    categories: string[],
+    targetModelId?: string
+  ): Promise<Map<string, Set<number>>> {
+    if (!this.categoryData) {
+      throw new Error(
+        "Category data not loaded. Call loadCategoryData() first."
+      );
     }
 
-    console.log(`Found ${guidList.length} GUIDs for category '${category}'`);
+    // console.log(`Getting items for categories: ${categories.join(", ")}`);
+    const itemsMap = new Map<string, Set<number>>();
 
-    try {
-      const modelIdMap = await this.modelManager.fragmentManager.guidsToModelIdMap(guidList);
-      
-      if (!modelIdMap || Object.keys(modelIdMap).length === 0) {
+    for (const category of categories) {
+      const guidList = this.categoryData[category];
+      if (!guidList || guidList.length === 0) {
         continue;
       }
 
-      for (const [modelId, localIds] of Object.entries(modelIdMap)) {
-        // STRICT FILTERING: Only process if matches targetModelId or no filter specified
-        if (targetModelId && modelId !== targetModelId) {
+      // console.log(`Found ${guidList.length} GUIDs for category '${category}'`);
+
+      try {
+        const modelIdMap =
+          await this.modelManager.fragmentManager.guidsToModelIdMap(guidList);
+
+        if (!modelIdMap || Object.keys(modelIdMap).length === 0) {
           continue;
         }
 
-        // Additional check: Ensure model exists in fragment manager
-        const model = this.modelManager.fragmentManager.list.get(modelId);
-        if (!model) {
-          continue;
-        }
+        for (const [modelId, localIds] of Object.entries(modelIdMap)) {
+          // STRICT FILTERING: Only process if matches targetModelId or no filter specified
+          if (targetModelId && modelId !== targetModelId) {
+            continue;
+          }
 
-        let localIdsArray: number[] = [];
-        
-        if (Array.isArray(localIds)) {
-          localIdsArray = localIds;
-        } else if (localIds instanceof Set) {
-          localIdsArray = Array.from(localIds);
-        } else {
-          continue;
-        }
+          // Additional check: Ensure model exists in fragment manager
+          const model = this.modelManager.fragmentManager.list.get(modelId);
+          if (!model) {
+            continue;
+          }
 
-        if (localIdsArray.length === 0) {
-          continue;
-        }
+          let localIdsArray: number[] = [];
 
-        console.log(`Adding ${localIdsArray.length} items from model ${modelId} for category '${category}'`);
+          if (Array.isArray(localIds)) {
+            localIdsArray = localIds;
+          } else if (localIds instanceof Set) {
+            localIdsArray = Array.from(localIds);
+          } else {
+            continue;
+          }
 
-        if (!itemsMap.has(modelId)) {
-          itemsMap.set(modelId, new Set());
+          if (localIdsArray.length === 0) {
+            continue;
+          }
+
+/*           console.log(
+            `Adding ${localIdsArray.length} items from model ${modelId} for category '${category}'`
+          ); */
+
+          if (!itemsMap.has(modelId)) {
+            itemsMap.set(modelId, new Set());
+          }
+
+          const existingIds = itemsMap.get(modelId)!;
+          localIdsArray.forEach((id) => existingIds.add(id));
         }
-        
-        const existingIds = itemsMap.get(modelId)!;
-        localIdsArray.forEach((id) => existingIds.add(id));
+      } catch (error) {
+        continue;
       }
-    } catch (error) {
-      continue;
     }
+
+    // console.log(`Final items map for categories:`, itemsMap);
+    return itemsMap;
   }
 
-  console.log(`Final items map for categories:`, itemsMap);
-  return itemsMap;
-}
-
-private getIntersection(
+  public getIntersection(
     map1: Map<string, Set<number>>,
     map2: Map<string, Set<number>>
   ): Map<string, Set<number>> {
@@ -291,7 +417,7 @@ private getIntersection(
   /**
    * Legacy method - kept for backward compatibility with built-in methods
    */
-  private async getItemsByCategory(
+  public async getItemsByCategory(
     categories: string[],
     targetModelId?: string
   ): Promise<Map<string, Set<number>>> {
@@ -324,95 +450,98 @@ private getIntersection(
     return itemsMap;
   }
 
-private async getItemsByLevel(
-  levels: string[],
-  targetModelId?: string
-): Promise<Map<string, Set<number>>> {
-  console.log(`Getting items for levels: ${levels.join(', ')}`);
-  
-  const itemsMap = new Map<string, Set<number>>();
+  public async getItemsByLevel(
+    levels: string[],
+    targetModelId?: string
+  ): Promise<Map<string, Set<number>>> {
+    // console.log(`Getting items for levels: ${levels.join(", ")}`);
 
-  for (const level of levels) {
-    const classification = this.hider.classifier.list.get("Levels");
-    if (!classification) {
-      continue;
-    }
+    const itemsMap = new Map<string, Set<number>>();
 
-    const groupData = classification.get(level);
-    if (!groupData) {
-      continue;
-    }
-
-    console.log(`Found level '${level}' in classification`);
-
-    try {
-      const modelIdMap = await groupData.get();
-
-      for (const [modelId, localIds] of Object.entries(modelIdMap)) {
-        // STRICT FILTERING: Only process if matches targetModelId or no filter specified
-        if (targetModelId && modelId !== targetModelId) {
-          continue;
-        }
-
-        // Additional check: Ensure model exists in fragment manager
-        const model = this.modelManager.fragmentManager.list.get(modelId);
-        if (!model) {
-          continue;
-        }
-
-        let localIdsArray: number[] = [];
-        
-        if (Array.isArray(localIds)) {
-          localIdsArray = localIds;
-        } else if (localIds instanceof Set) {
-          localIdsArray = Array.from(localIds);
-        } else {
-          continue;
-        }
-
-        if (localIdsArray.length === 0) {
-          continue;
-        }
-
-        console.log(`Adding ${localIdsArray.length} items from model ${modelId} for level '${level}'`);
-
-        if (!itemsMap.has(modelId)) {
-          itemsMap.set(modelId, new Set());
-        }
-        const existingIds = itemsMap.get(modelId)!;
-        localIdsArray.forEach((id) => existingIds.add(id));
+    for (const level of levels) {
+      const classification = this.hider.classifier.list.get("Levels");
+      if (!classification) {
+        continue;
       }
-    } catch (error) {
-      continue;
+
+      const groupData = classification.get(level);
+      if (!groupData) {
+        continue;
+      }
+
+      // console.log(`Found level '${level}' in classification`);
+
+      try {
+        const modelIdMap = await groupData.get();
+
+        for (const [modelId, localIds] of Object.entries(modelIdMap)) {
+          // STRICT FILTERING: Only process if matches targetModelId or no filter specified
+          if (targetModelId && modelId !== targetModelId) {
+            continue;
+          }
+
+          // Additional check: Ensure model exists in fragment manager
+          const model = this.modelManager.fragmentManager.list.get(modelId);
+          if (!model) {
+            continue;
+          }
+
+          let localIdsArray: number[] = [];
+
+          if (Array.isArray(localIds)) {
+            localIdsArray = localIds;
+          } else if (localIds instanceof Set) {
+            localIdsArray = Array.from(localIds);
+          } else {
+            continue;
+          }
+
+          if (localIdsArray.length === 0) {
+            continue;
+          }
+
+/*           console.log(
+            `Adding ${localIdsArray.length} items from model ${modelId} for level '${level}'`
+          ); */
+
+          if (!itemsMap.has(modelId)) {
+            itemsMap.set(modelId, new Set());
+          }
+          const existingIds = itemsMap.get(modelId)!;
+          localIdsArray.forEach((id) => existingIds.add(id));
+        }
+      } catch (error) {
+        continue;
+      }
     }
+
+    // console.log(`Final items map for levels:`, itemsMap);
+    return itemsMap;
   }
 
-  console.log(`Final items map for levels:`, itemsMap);
-  return itemsMap;
-}
+  // Highlighter.ts – replace the existing resetHighlight() with this:
+  public resetHighlight(): void {
+    // Remove highlighting from all previously highlighted items
+    for (const [modelId, _] of this.highlightedItems) {
+      const model = this.modelManager.fragmentManager.list.get(modelId);
+      if (!model) continue;
+      try {
+        model.resetHighlight();
+      } catch {}
+    }
+    // Clear the highlighted items map
+    this.highlightedItems.clear();
 
-  // Highlighter.ts â€” replace the existing resetHighlight() with this:
-public resetHighlight(): void {
-  // Remove highlighting from all previously highlighted items
-  for (const [modelId, _] of this.highlightedItems) {
-    const model = this.modelManager.fragmentManager.list.get(modelId);
-    if (!model) continue;
+    // … Force a render right away so colors disappear immediately
     try {
-      model.resetHighlight();
+      this.modelManager.fragmentManager.core.update(true);
     } catch {}
   }
-  // Clear the highlighted items map
-  this.highlightedItems.clear();
-
-  // âœ… Force a render right away so colors disappear immediately
-  try {
-    this.modelManager.fragmentManager.core.update(true);
-  } catch {}
-}
 
   public dispose(): void {
     this.resetHighlight();
     this.highlightedItems.clear();
+    this.highlightParamsToIds.clear();
     this.modelManager.fragmentManager.core.update(true);
   }
 

@@ -12,6 +12,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "sync-viewer": "node sync-viewer.cjs",
+    "update-viewer": "git submodule update --remote viewer-src && npm run sync-viewer",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
     "supabase:reset": "supabase db reset"

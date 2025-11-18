@@ -25,49 +25,47 @@ export class ModelManager {
   }
 
   private async initialize(): Promise<OBC.FragmentsManager> {
+    console.log("[ModelManager] Initializing worker...");
     const fragments = await this.initializeWorker();
-    //     // Read project data from sessionStorage (set by parent window)
-    const projectData = (window as any).currentProject || JSON.parse(sessionStorage.getItem('currentProject') || '{}');
-    
-    let fragPaths: string[] = [];
-    
-    if (projectData.model_url) {
-      // If project has a model_url, use it
-      // Support both single file and array of files
-      if (Array.isArray(projectData.model_url)) {
-        fragPaths = projectData.model_url;
-      } else {
-        fragPaths = [projectData.model_url];
-      }
-      console.log('[ModelManager] Loading model from project:', fragPaths);
-    } else {
-      // Fallback to default models
-      fragPaths = ["models/z5.frag", "models/z2.frag", "models/z3.frag", "models/z4.frag", "models/z1.frag"];
-      console.log('[ModelManager] Using default models:', fragPaths);
-    }
 
+    // const fragPaths = ["models/z1.frag", "models/z2.frag", "models/z3.frag", "models/z4.frag", "models/z5.frag", "models/z6.frag"];
+    const fragPaths = ["models/z06.frag"];
+
+    console.log(`[ModelManager] Loading ${fragPaths.length} fragment file(s)...`);
+
+    // Load all fragments
     await Promise.all(
-      fragPaths.map(async (path) => {
+      fragPaths.map(async (path, index) => {
         const modelId = path.split("/").pop()?.split(".").shift();
         if (!modelId) return null;
 
-        try {
-          const file = await fetch(path);
-          if (!file.ok) {
-            console.warn(`[ModelManager] Failed to load ${path}: ${file.statusText}`);
-            return null;
-          }
-          const buffer = await file.arrayBuffer();
+        console.log(`[ModelManager] Fetching ${path}...`);
+        const file = await fetch(path);
+        const buffer = await file.arrayBuffer();
+        console.log(`[ModelManager] Loaded ${path} (${(buffer.byteLength / 1024 / 1024).toFixed(2)} MB)`);
 
-        this.modelIds.push(modelId); // Save the modelId
-                  this.modelIds.push(modelId); // Save the modelId
-          return fragments.core.load(buffer, { modelId });
-        } catch (error) {
-          console.error(`[ModelManager] Error loading ${path}:`, error);
-          return null;
-        }
+        this.modelIds.push(modelId);
+        console.log(`[ModelManager] Loading fragment ${index + 1}/${fragPaths.length}: ${modelId}`);
+        const result = await fragments.core.load(buffer, { modelId });
+        console.log(`[ModelManager] Fragment ${modelId} loaded successfully`);
+        return result;
       })
     );
+
+    console.log("[ModelManager] All fragments loaded");
+
+    // Wait for fragments to be added to the scene
+    await new Promise<void>(resolve => {
+      const checkAdded = () => {
+        if (fragments.list.size === fragPaths.length) {
+          console.log(`[ModelManager] All ${fragments.list.size} fragments added to scene`);
+          resolve();
+        } else {
+          setTimeout(checkAdded, 50);
+        }
+      };
+      checkAdded();
+    });
 
     return fragments;
   }

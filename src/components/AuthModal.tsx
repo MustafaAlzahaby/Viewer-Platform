@@ -1,16 +1,17 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Mail, Lock, User, Building, Briefcase, Eye, EyeOff } from 'lucide-react'
-import { useAuth } from '../hooks/useAuth'
+import type { UseAuthReturn } from '../hooks/useAuth'
 
 interface AuthModalProps {
   isOpen: boolean
   onClose: () => void
   initialMode?: 'login' | 'register'
   onSuccess?: () => void
+  auth: Pick<UseAuthReturn, 'signIn' | 'signUp'>
 }
 
-export function AuthModal({ isOpen, onClose, initialMode = 'login', onSuccess }: AuthModalProps) {
+export function AuthModal({ isOpen, onClose, initialMode = 'login', onSuccess, auth }: AuthModalProps) {
   const [mode, setMode] = useState<'login' | 'register'>(initialMode)
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -24,63 +25,127 @@ export function AuthModal({ isOpen, onClose, initialMode = 'login', onSuccess }:
     position: ''
   })
 
-  const { signIn, signUp } = useAuth()
+  const { signIn, signUp } = auth
+
+  const getErrorMessage = (error: any): string => {
+    if (!error || !error.message) return 'An error occurred'
+    
+    const message = error.message.toLowerCase()
+    if (message.includes('invalid login credentials') || message.includes('invalid email or password')) {
+      return 'Invalid email or password'
+    }
+    if (message.includes('email not confirmed') || message.includes('email not verified')) {
+      return 'Please verify your email address before signing in'
+    }
+    if (message.includes('already registered') || message.includes('user already exists')) {
+      return 'This email is already registered. Please sign in instead.'
+    }
+    return error.message
+  }
+
+  const handleLogin = async (email: string, password: string): Promise<boolean> => {
+    try {
+      const result = await signIn(email, password)
+      
+      if (result.error) {
+        setError(getErrorMessage(result.error))
+        return false
+      }
+      
+      if (!result.data?.user) {
+        setError('Invalid email or password')
+        return false
+      }
+      
+      return true
+    } catch (err: any) {
+      setError(getErrorMessage(err))
+      return false
+    }
+  }
+
+  const handleRegister = async (): Promise<boolean> => {
+    // Validation
+    if (!formData.fullName.trim()) {
+      setError('Full name is required')
+      return false
+    }
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters')
+      return false
+    }
+    if (!formData.email.includes('@') || !formData.email.includes('.')) {
+      setError('Please enter a valid email address')
+      return false
+    }
+
+    try {
+      const result = await signUp(
+        formData.email,
+        formData.password,
+        formData.fullName,
+        formData.company,
+        formData.position
+      )
+      
+      if (result.error) {
+        setError(getErrorMessage(result.error))
+        return false
+      }
+      
+      setError('Registration successful! You can now sign in.')
+      return true
+    } catch (err: any) {
+      setError(getErrorMessage(err))
+      return false
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    e.stopPropagation()
+    
     setLoading(true)
     setError('')
 
     try {
-      if (mode === 'login') {
-        // Check for admin credentials
-        if (formData.email === 'admin' && formData.password === '123456789ff') {
-          // Handle admin login with fallback
-          try {
-            const { error } = await signIn('admin@construction.com', '123456789ff')
-            if (error) {
-              // If admin user doesn't exist, create a temporary session
-              console.log('Admin login successful with demo credentials')
-            }
-          } catch (err) {
-            // Fallback for demo - just close modal
-            console.log('Using demo admin login')
-          }
-        } else {
-          const { error } = await signIn(formData.email, formData.password)
-          if (error) throw error
-        }
-        onSuccess ? onSuccess() : onClose()
-      } else {
-        // Validation
-        if (!formData.fullName.trim()) {
-          throw new Error('Full name is required')
-        }
-        if (formData.password.length < 6) {
-          throw new Error('Password must be at least 6 characters')
-        }
-        if (!formData.email.includes('@')) {
-          throw new Error('Please enter a valid email address')
-        }
+      let success = false
 
-        const { error } = await signUp(
-          formData.email,
-          formData.password,
-          formData.fullName,
-          formData.company,
-          formData.position
-        )
-        if (error) throw error
+      if (mode === 'login') {
+        // Handle admin shortcut
+        const email = formData.email === 'admin' 
+          ? 'admin@construction.com' 
+          : formData.email
         
-        setError('Registration successful! You can now sign in.')
-        setTimeout(() => {
-          onSuccess ? onSuccess() : onClose()
-          setError('')
-        }, 3000)
+        success = await handleLogin(email, formData.password)
+      } else {
+        success = await handleRegister()
+        
+        if (success) {
+          // For registration, show success message then switch to login
+          setTimeout(() => {
+            setMode('login')
+            setError('')
+            setFormData({ ...formData, password: '', fullName: '', company: '', position: '' })
+          }, 2000)
+          setLoading(false)
+          return
+        }
       }
+
+      setLoading(false)
+
+      // Only navigate on successful authentication
+      if (success && mode === 'login') {
+        if (onSuccess) {
+          onSuccess()
+        } else {
+          onClose()
+        }
+      }
+      // If not successful, error is already set and modal stays open
     } catch (err: any) {
-      setError(err.message || 'An error occurred')
-    } finally {
+      setError(getErrorMessage(err))
       setLoading(false)
     }
   }
