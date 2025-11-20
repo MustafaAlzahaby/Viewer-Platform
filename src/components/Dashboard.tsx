@@ -73,11 +73,11 @@ export function Dashboard({ authState, onOpenViewer, onOpenBaseline, onBackToHom
       setLoading(true)
 
       if (!supabase) {
-        console.log('[Dashboard] Demo mode - using static project')
+        console.log('[Dashboard] Demo mode - using static MOC project')
         setProjects([{
           id: 'demo-project',
-          name: 'MOC Building Model',
-          description: 'Demo construction project with BIM model and progress tracking',
+          name: 'MOC',
+          description: 'MOC Construction Project',
           model_url: '/models/z06.frag',
           excel_url: '/excel-sheet/data.xlsx',
           baseline_data: null,
@@ -129,11 +129,39 @@ export function Dashboard({ authState, onOpenViewer, onOpenBaseline, onBackToHom
       const activeProjects = (data ?? []).filter((p: any) => p.is_active !== false)
       console.log('[Dashboard] Active projects after filtering:', activeProjects.length)
       
-      if (activeProjects.length === 0 && (data?.length || 0) > 0) {
-        console.warn('[Dashboard] All projects are inactive')
-      }
+      // Filter to only show "MOC" project
+      const mocProject = activeProjects.filter((p: any) => 
+        p.name && p.name.toUpperCase().includes('MOC')
+      )
       
-      setProjects(activeProjects as EditableProject[])
+      if (mocProject.length === 0) {
+        console.warn('[Dashboard] No MOC project found, showing first active project or creating default MOC')
+        // If no MOC project exists, use the first active project or create a default
+        if (activeProjects.length > 0) {
+          // Use first project but rename it to MOC for display
+          const defaultMOC = { ...activeProjects[0], name: 'MOC' }
+          setProjects([defaultMOC as EditableProject])
+        } else {
+          // Create a default MOC project
+          const defaultMOC: EditableProject = {
+            id: 'moc-default',
+            name: 'MOC',
+            description: 'MOC Construction Project',
+            model_url: '/models/z06.frag',
+            excel_url: '/excel-sheet/data.xlsx',
+            baseline_data: null,
+            created_by: profile?.id || '',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            is_active: true
+          }
+          setProjects([defaultMOC])
+        }
+      } else {
+        // Show only MOC project(s) - if multiple, show the first one
+        setProjects([mocProject[0] as EditableProject])
+        console.log('[Dashboard] Showing MOC project:', mocProject[0].name)
+      }
     } catch (error) {
       console.error('[Dashboard] Error fetching projects:', error)
       // Don't set empty array on error - let user see there was an issue
