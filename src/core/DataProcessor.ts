@@ -19,7 +19,11 @@ export class DataProcessor {
       await this.processData();
     } catch (error) {
       console.error("Failed to initialize data processor:", error);
-      throw error;
+      // Don't throw - allow viewer to continue without data processing
+      // Set empty results so the viewer can still function
+      this.inProgressResults = [];
+      this.completedResults = [];
+      console.warn("Data processor initialized with empty results - viewer will work but highlighting features will be limited");
     }
   }
 

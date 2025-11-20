@@ -42,12 +42,28 @@ export class BimViewerApp {
     this.controller = new HighlightController(this.modelManager, this.hider);
     await this.controller.initializeAfterModelLoad();
 
-    await this.controller.initialize(
-      "./config.json",
-      "./excel-sheet/data.xlsx",
-      "./guids/guids.json"
-    );
-    (window as any).controller = this.controller;
+    // Get project data from sessionStorage or window
+    const projectData = (window as any).currentProject || JSON.parse(sessionStorage.getItem('currentProject') || '{}');
+    
+    // Use project Excel URL if available, otherwise fallback to default
+    const excelUrl = projectData.excel_url || "./excel-sheet/data.xlsx";
+    const configUrl = "./config.json";
+    const guidsUrl = "./guids/guids.json";
+    
+    console.log("[BimViewerApp] Initializing with:", { configUrl, excelUrl, guidsUrl, projectName: projectData.name });
+
+    try {
+      await this.controller.initialize(
+        configUrl,
+        excelUrl,
+        guidsUrl
+      );
+      (window as any).controller = this.controller;
+    } catch (error) {
+      console.error("[BimViewerApp] Failed to initialize controller:", error);
+      console.warn("[BimViewerApp] Continuing without data processor - viewer will work but highlighting may be limited");
+      // Continue initialization even if data processor fails
+    }
 
     // Initialize Views Manager
     this.viewsManager = new ViewsManager(
@@ -70,12 +86,20 @@ export class BimViewerApp {
     // Initialize Excel data panel
     this.excelPanel = new ExcelDataPanel("container");
 
-    // Load Excel data - specify your column names here
-    await this.excelPanel.loadExcelData(
-      "./excel-sheet/data.xlsx",
-      "Activity Name", // Replace with your first column name
-      "Performance % Complete" // Replace with your second column name
-    );
+    // Use project Excel URL if available, otherwise fallback to default
+    const excelUrl = projectData.excel_url || "./excel-sheet/data.xlsx";
+    
+    try {
+      // Load Excel data - specify your column names here
+      await this.excelPanel.loadExcelData(
+        excelUrl,
+        "Activity Name", // Replace with your first column name
+        "Performance % Complete" // Replace with your second column name
+      );
+    } catch (error) {
+      console.error("[BimViewerApp] Failed to load Excel data:", error);
+      console.warn("[BimViewerApp] Continuing without Excel panel - viewer will work but Excel features will be unavailable");
+    }
 
     // Add search functionality
     this.excelPanel.addSearchBox();

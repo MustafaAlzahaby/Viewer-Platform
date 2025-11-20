@@ -1,0 +1,121 @@
+{
+  "zones": {
+    "z1": ["zone 01", "z01", "z1"],
+    "z2": ["zone 02", "z02", "z2"],
+    "z3": ["zone 03", "z03", "z3"],
+    "z4": ["zone 04", "z04", "z4"],
+    "z5": ["zone 05", "z05", "z5"],
+    "z06": ["zone 06", "z06", "z6"],
+    "MOC Building Model": ["box2"]
+  },
+
+  "levels": {
+    "[\"Level 00\", \"01-Ground F.F.L\", \"LEVEL 00 -@2.6\"]": ["ground floor"],
+    "[\"Mechanical 15\",\"Mechanical 14\",\"Level 01\",\"LEVEL 00\",\"LEVEL 00 _@2.6\"]": [
+      "first floor",
+      "level 01",
+      "floor 01",
+      "level 1",
+      "floor 1"
+    ],
+    "[\"Level 30\",\"LEVEL 02\", \"Level 35\", \"Mechanical 16\", \"Level 02\", \"Level 23\", \"Level 28\", \"Mechanical 14\", \"03-First F.F.L\"]": [
+      "second floor",
+      "level 02",
+      "floor 02",
+      "level 2",
+      "floor 2"
+    ],
+    "[\"Roof\",\"Mechanical 35\",\"ROOF\"]": ["roof, roof floor"]
+  },
+
+  "category": {
+    "[\"ff\"]": [
+      "fire fighting pipes installation & testing",
+      "fire sprinklers installation"
+    ],
+    "[\"hvac\"]": [
+      "air handling pipes installation",
+      "air diffusers installation"
+    ],
+    "[\"plumbing\"]": [
+      "water supply pipes installation & testing",
+      "floor drain installation"
+    ],
+    "[\"fireAlarm\"]": [
+      "fire alarm & voice evacuation installation",
+      "fire alarm & voice evacuation system installation"
+    ],
+    "[\"electrical\"]": [
+      "Cable Trays & Trunks Installation",
+      "floor sockets installation"
+    ],
+    "[\"data\"]": [
+      "telecommunication & data system conduits and boxes installation",
+      "telecommunication and data system installation"
+    ],
+    "[\"security\"]": [
+      "security system conduits and boxes installation",
+      "security system installation"
+    ],
+    "[\"paint\"]": ["plaster first stage", "final painting coat"],
+    "[\"floors\"]": [
+      "raised floor first fix",
+      "raised floor final fix installation"
+    ],
+    "[\"windowDoor\"]": ["wooden doors installation"],
+    "[\"ceiling\"]": ["wooden ceiling first fix", "wooden ceiling second fix"]
+  },
+
+  "progress": {
+    "IN_PROGRESS": [0, 100],
+    "COMPLETED": [100]
+  },
+
+  "filter": [
+    "cast",
+    "casting",
+    "pour",
+    "pouring",
+    "install",
+    "installation",
+    "fix",
+    "final",
+    "stage"
+  ],
+
+  "forceInProgressKeywords": [
+    "Plaster First Stage",
+    "Cable Trays & Trunks Installation",
+    "Wooden Ceiling First Fix",
+    "Raised Floor First Fix",
+    "Water Supply pipes installation & Testing",
+    "Fire Fighting pipes installation & Testing",
+    "Air Handling pipes installation",
+    "Conduits and boxes installation",
+    "Telecommunication & Data System Conduits and boxes installation",
+    "Security System Conduits and boxes installation",
+    "Fire Alarm & Voice Evacuation Conduits and boxes installation"
+  ],
+
+  "colorKey": {
+    "ff": "#a85100",
+    "hvac": "#ffe17d",
+    "plumbing": "#421e00",
+    "fireAlarm": "#ffbc85",
+    "electrical": "#f78820",
+    "data": "#ffbc85",
+    "security": "#ffbc85",
+    "paint": "#87CEEB",
+    "floors": "#000080",
+    "windowDoor": "#3f2180",
+    "ceiling": "#396985"
+  },
+
+  "levelGroups": {
+    "Basement": ["Mechanical 32", "Basement 02", "BASEMENT 02", "Basement 01"],
+    "Ground": ["01-Ground F.F.L", "LEVEL 00 -@2.6", "Level 00"],
+    "First Floor": ["Mechanical 15", "Mechanical 14", "Level 01", "LEVEL 00", "LEVEL 00 _@2.6", "Mechanical 15"],
+    "Second Floor": ["Level 30", "LEVEL 02", "Level 35", "Mechanical 16", "Level 02", "Level 23", "Level 28", "Mechanical 14", "03-First F.F.L"],
+    "Roof": ["Mechanical 35", "Roof", "ROOF"]
+  }
+}

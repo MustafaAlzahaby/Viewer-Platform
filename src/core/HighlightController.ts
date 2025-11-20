@@ -74,10 +74,20 @@ export class HighlightController {
     dataUrl: string,
     categoryJsonUrl?: string
   ): Promise<void> {
-    await this.dataProcessor.initialize(configUrl, dataUrl);
+    try {
+      await this.dataProcessor.initialize(configUrl, dataUrl);
+    } catch (error) {
+      console.error("Failed to initialize data processor:", error);
+      // Continue - data processor will have empty results
+    }
 
     // Load color configuration from config.json
-    await this.loadColorConfig(configUrl);
+    try {
+      await this.loadColorConfig(configUrl);
+    } catch (error) {
+      console.error("Failed to load color config:", error);
+      // Continue with default colors
+    }
 
     if (categoryJsonUrl) {
       try {
@@ -85,15 +95,21 @@ export class HighlightController {
         console.log("Category data loaded from:", categoryJsonUrl);
       } catch (error) {
         console.error("Failed to load category data:", error);
+        // Continue without category data
       }
     }
 
-    await this.preprocessExcelData();
+    try {
+      await this.preprocessExcelData();
+    } catch (error) {
+      console.error("Failed to preprocess Excel data:", error);
+      // Continue with empty processed data
+    }
 
     // ⚠️ DON'T populate here - models aren't loaded yet!
     // await this.populateHighlightParamsMap();
 
-    console.log("✅ HighlightController data processing complete");
+    console.log("✅ HighlightController initialization complete");
     console.log("⏳ Waiting for model load to populate params map...");
   }
   /**
