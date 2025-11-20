@@ -229,7 +229,7 @@ export function LandingPage({ onGetStarted, onAboutUs }: LandingPageProps) {
             </motion.p>
 
             <motion.div
-              className="flex flex-col sm:flex-row gap-6"
+              className="flex justify-center"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 1 }}
@@ -242,16 +242,6 @@ export function LandingPage({ onGetStarted, onAboutUs }: LandingPageProps) {
               >
                 Start Your Journey
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </motion.button>
-              
-              <motion.button
-                onClick={() => window.open('/viewer.html', '_blank')}
-                className="group text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 px-10 py-4 rounded-xl font-semibold text-lg transition-all duration-300 border-2 border-gray-300 dark:border-gray-600 hover:border-red-500 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm flex items-center gap-3"
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Eye className="w-5 h-5" />
-                View Demo
               </motion.button>
             </motion.div>
 
