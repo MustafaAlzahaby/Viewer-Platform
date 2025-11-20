@@ -25,19 +25,46 @@ export class ModelManager {
 
   private async initialize(): Promise<OBC.FragmentsManager> {
     const fragments = await this.initializeWorker();
-    // const fragPaths = ["models/z1.frag", "models/z2.frag", "models/z3.frag", "models/z4.frag", "models/z5.frag", "models/z6.frag"];
-    const fragPaths = ["models/z5.frag", "models/z2.frag", "models/z3.frag", "models/z4.frag", "models/z1.frag"];
+    
+    // Read project data from sessionStorage (set by parent window)
+    const projectData = (window as any).currentProject || JSON.parse(sessionStorage.getItem('currentProject') || '{}');
+    
+    let fragPaths: string[] = [];
+    
+    if (projectData.model_url) {
+      // If project has a model_url, use it
+      // Support both single file and array of files
+      if (Array.isArray(projectData.model_url)) {
+        fragPaths = projectData.model_url;
+      } else {
+        fragPaths = [projectData.model_url];
+      }
+      console.log('[ModelManager] Loading model from project:', fragPaths);
+    } else {
+      // Fallback to default models
+      fragPaths = ["models/z5.frag", "models/z2.frag", "models/z3.frag", "models/z4.frag", "models/z1.frag"];
+      console.log('[ModelManager] Using default models:', fragPaths);
+    }
 
     await Promise.all(
       fragPaths.map(async (path) => {
         const modelId = path.split("/").pop()?.split(".").shift();
         if (!modelId) return null;
 
-        const file = await fetch(path);
-        const buffer = await file.arrayBuffer();
+        try {
+          const file = await fetch(path);
+          if (!file.ok) {
+            console.warn(`[ModelManager] Failed to load ${path}: ${file.statusText}`);
+            return null;
+          }
+          const buffer = await file.arrayBuffer();
 
-        this.modelIds.push(modelId); // Save the modelId
-        return fragments.core.load(buffer, { modelId });
+          this.modelIds.push(modelId); // Save the modelId
+          return fragments.core.load(buffer, { modelId });
+        } catch (error) {
+          console.error(`[ModelManager] Error loading ${path}:`, error);
+          return null;
+        }
       })
     );
 

@@ -1,4 +1,5 @@
 import { BimViewerApp } from "./BimViewerApp";
+import "../../styles.css";
 
 const CONTAINER_ID = "container";
 let bimApp: BimViewerApp | null = null;
