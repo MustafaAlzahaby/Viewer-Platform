@@ -4,12 +4,10 @@ import * as OBC from "@thatopen/components";
 export class ClassifierPanel {
   private components: OBC.Components;
   private classifier: OBC.Classifier;
-  private fragments: OBC.FragmentsManager;
 
-  constructor(components: OBC.Components, fragments: OBC.FragmentsManager) {
+  constructor(components: OBC.Components, _fragments: OBC.FragmentsManager) {
     this.components = components;
     this.classifier = this.components.get(OBC.Classifier);
-    this.fragments = fragments;
   }
 
   public async init() {

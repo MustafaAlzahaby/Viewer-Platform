@@ -145,7 +145,7 @@ export function Dashboard({ authState, onOpenViewer, onOpenBaseline, onBackToHom
   }
 
   const fetchUsers = async () => {
-    if (!isAdmin) return
+    if (!isAdmin || !supabase) return
     try {
       setUsersLoading(true)
       const { data, error } = await supabase
@@ -199,9 +199,9 @@ export function Dashboard({ authState, onOpenViewer, onOpenBaseline, onBackToHom
         const demoProject: EditableProject = {
           id: 'demo-project-' + Date.now(),
           name: newProject.name.trim(),
-          description: newProject.description.trim() || null,
-          model_url: newProject.model_url.trim() || null,
-          excel_url: newProject.excel_url.trim() || null,
+          description: newProject.description.trim() || undefined,
+          model_url: newProject.model_url.trim() || undefined,
+          excel_url: newProject.excel_url.trim() || undefined,
           baseline_data: null,
           created_by: profile.id,
           created_at: new Date().toISOString(),
@@ -234,9 +234,9 @@ export function Dashboard({ authState, onOpenViewer, onOpenBaseline, onBackToHom
       if (supabase) {
         const update: Partial<Project> = {
           name: (proj.name || '').trim(),
-          description: (proj.description || '')?.trim() || null,
-          model_url: (proj.model_url || '')?.trim() || null,
-          excel_url: (proj.excel_url || '')?.trim() || null,
+          description: (proj.description || '')?.trim() || undefined,
+          model_url: (proj.model_url || '')?.trim() || undefined,
+          excel_url: (proj.excel_url || '')?.trim() || undefined,
           updated_at: new Date().toISOString()
         }
 
@@ -257,12 +257,12 @@ export function Dashboard({ authState, onOpenViewer, onOpenBaseline, onBackToHom
         setProjects(prev => prev.map(p => p.id === proj.id ? { ...(data as EditableProject), _editing: false } : p))
         await fetchProjects()
       } else {
-        const updatedProject = {
+        const updatedProject: EditableProject = {
           ...proj,
           name: (proj.name || '').trim(),
-          description: (proj.description || '')?.trim() || null,
-          model_url: (proj.model_url || '')?.trim() || null,
-          excel_url: (proj.excel_url || '')?.trim() || null,
+          description: (proj.description || '')?.trim() || undefined,
+          model_url: (proj.model_url || '')?.trim() || undefined,
+          excel_url: (proj.excel_url || '')?.trim() || undefined,
           updated_at: new Date().toISOString(),
           _editing: false
         }

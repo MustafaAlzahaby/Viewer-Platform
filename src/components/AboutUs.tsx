@@ -1,4 +1,3 @@
-import React from 'react'
 import { motion } from 'framer-motion'
 import { 
   ArrowLeft, 
@@ -9,9 +8,7 @@ import {
   Briefcase,
   GraduationCap,
   MapPin,
-  Mail,
   Calendar,
-  Layers,
   Activity,
   Monitor
 } from 'lucide-react'

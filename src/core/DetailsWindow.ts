@@ -2,12 +2,11 @@ import type { ModelManager } from "./ModelManager";
 import type { SceneManager } from "./SceneManager";
 import * as OBC from "@thatopen/components";
 import * as FRAGS from "@thatopen/fragments";
-import * as THREE from "three";
 import type { HighlightController } from "./HighlightController";
 
 export class DetailsWindow {
   private sceneManager: SceneManager;
-  private casters: OBC.Raycasters;
+  private casters!: OBC.Raycasters;
   private modelManager: ModelManager;
   private popupElement: HTMLElement | null = null;
   private highlightController: HighlightController;
@@ -26,10 +25,11 @@ export class DetailsWindow {
   private init() {
     this.casters = this.sceneManager.components.get(OBC.Raycasters);
     const caster = this.casters.get(this.sceneManager.world);
+    if (!caster) return;
 
     // We set a selection callback, so we can decide what
     // happen with the selected element later
-    let onSelectCallback = (_modelIdMap: OBC.ModelIdMap) => {};
+    let onSelectCallback = (_modelIdMap: OBC.ModelIdMap, _event?: MouseEvent) => {};
 
     this.sceneManager.container.addEventListener("dblclick", async (event) => {
       const result = (await caster.castRay()) as any;
@@ -53,10 +53,7 @@ export class DetailsWindow {
     let onItemSelected = () => {};
     let attributes: FRAGS.ItemData | undefined;
 
-    // We set the color outside just to be able to change it from the UI
-    const color = new THREE.Color("purple");
-
-    onSelectCallback = async (modelIdMap, event?: MouseEvent) => {
+    onSelectCallback = async (modelIdMap: OBC.ModelIdMap, event?: MouseEvent) => {
       const modelId = Object.keys(modelIdMap)[0];
       if (modelId && this.modelManager.fragmentManager.list.get(modelId)) {
         const model = this.modelManager.fragmentManager.list.get(modelId)!;
@@ -67,9 +64,10 @@ export class DetailsWindow {
         // console.log("Attributes:", attributes);
 
         // Get activity name from activity map
-        const localId = localIds[0];
+        // Handle case where attributes might be an array or object
+        const attrsObj = Array.isArray(attributes) ? attributes[0] : attributes;
         const elementLocalId =
-          attributes?._localId?.value || attributes?._localId;
+          (attrsObj as any)?._localId?.value || (attrsObj as any)?._localId;
         const gid = await this.modelManager.fragmentManager.modelIdMapToGuids(
           modelIdMap
         );
@@ -185,11 +183,13 @@ export class DetailsWindow {
             }
           }
         }
+        // Handle case where attributes might be an array or object
+        const attrsObjFinal = Array.isArray(attributes) ? attributes[0] : attributes;
         this.showPopup({
           // Fix: Access the value property of ObjectType or Name
           familyName:
-            attributes?.ObjectType?.value ||
-            attributes?.Name?.value ||
+            (attrsObjFinal as any)?.ObjectType?.value ||
+            (attrsObjFinal as any)?.Name?.value ||
             "Unknown Family",
           activityName: activityName,
           mouseEvent: event,
@@ -386,7 +386,6 @@ export class DetailsWindow {
 
       // Position popup
       if (details.mouseEvent) {
-        const rect = this.sceneManager.container.getBoundingClientRect();
         let x = details.mouseEvent.clientX + 15;
         let y = details.mouseEvent.clientY + 15;
 

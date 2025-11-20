@@ -123,6 +123,6 @@ export class RightPanelsContainer {
     if (this.container) {
       this.container.remove();
     }
-    this.viewsManager.dispose();
+    // ViewsManager doesn't have a dispose method
   }
 }

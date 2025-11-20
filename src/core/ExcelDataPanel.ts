@@ -744,7 +744,7 @@ export class ExcelDataPanel {
 
   private updateRowExpansion(
     rowElement: HTMLTableRowElement,
-    index: number,
+    _index: number,
     isExpanded: boolean
   ): void {
     const cell1 = rowElement.cells[0];

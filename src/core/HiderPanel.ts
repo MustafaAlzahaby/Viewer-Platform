@@ -151,12 +151,12 @@ export class HiderPanel {
     };
 
     // 4) Your existing Hiding logic (if needed)
-    const hideByCategory = async (cats: string[]) => {
-      // Your original hideByCategory implementation
-    };
-    const hideByLevel = async (lvls: string[]) => {
-      // Your original hideByLevel implementation
-    };
+    // const _hideByCategory = async (_cats: string[]) => {
+    //   // Your original hideByCategory implementation
+    // };
+    // const _hideByLevel = async (_lvls: string[]) => {
+    //   // Your original hideByLevel implementation
+    // };
 
     // 5) Build the panel
     this.panel = BUI.Component.create<BUI.PanelSection>(() => {
@@ -224,8 +224,8 @@ export class HiderPanel {
               <div class="modern-isolation-section">
                 <div class="isolation-container">
                   ${levelGroupNames.map((groupName, index) => {
-                    const levelCount = validatedLevelGroups[groupName].length;
-                    const levelList = validatedLevelGroups[groupName].join(", ");
+                    // const _levelCount = validatedLevelGroups[groupName].length;
+                    // const _levelList = validatedLevelGroups[groupName].join(", ");
                     
                     return BUI.html`
                       <div class="level-item" style="animation-delay: ${index * 0.05}s">
@@ -371,17 +371,17 @@ export class HiderPanel {
 }
 
 // ─── Your existing dropdown templates (if still needed) ────────────────────
+// Commented out unused templates
+// const _categoriesDropdownTemplate = () => {
+//   const onCreated = async (_e?: Element) => {
+//     /* …your original category-dropdown population… */
+//   };
+//   return BUI.html`<bim-dropdown multiple ${BUI.ref(onCreated)}></bim-dropdown>`;
+// };
 
-const categoriesDropdownTemplate = () => {
-  const onCreated = async (e?: Element) => {
-    /* …your original category-dropdown population… */
-  };
-  return BUI.html`<bim-dropdown multiple ${BUI.ref(onCreated)}></bim-dropdown>`;
-};
-
-const levelsDropdownTemplate = () => {
-  const onCreated = async (e?: Element) => {
-    /* …your original level-dropdown population… */
-  };
-  return BUI.html`<bim-dropdown multiple ${BUI.ref(onCreated)}></bim-dropdown>`;
-};
+// const _levelsDropdownTemplate = () => {
+//   const onCreated = async (_e?: Element) => {
+//     /* …your original level-dropdown population… */
+//   };
+//   return BUI.html`<bim-dropdown multiple ${BUI.ref(onCreated)}></bim-dropdown>`;
+// };

@@ -111,7 +111,7 @@ export class Highlighter {
    */
   private getCategoryColor(
     categories: string[],
-    progressStatus?: "IN_PROGRESS" | "COMPLETED"
+    _progressStatus?: "IN_PROGRESS" | "COMPLETED"
   ): THREE.Color {
     const categoryKey = this.getPrimaryCategoryKey(categories);
 

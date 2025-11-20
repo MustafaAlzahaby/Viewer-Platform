@@ -1,5 +1,4 @@
 import * as OBC from "@thatopen/components";
-import * as THREE from "three";
 
 
 export class ModelManager {
@@ -55,23 +54,42 @@ export class ModelManager {
     });
     const workerUrl = URL.createObjectURL(workerFile);
     const fragments = this.fragmentManager;
+    if (!fragments) {
+      throw new Error("FragmentManager not initialized");
+    }
     fragments.init(workerUrl);
 
-    this.world.camera.controls.addEventListener("rest", () =>
-      fragments.core.update(true)
-    );
+    // Store reference for closure - TypeScript knows fragments is not null after check
+    const fragmentsRef = fragments!; // Non-null assertion after null check
+    if (this.world.camera.controls) {
+      this.world.camera.controls.addEventListener("rest", () => {
+        if (fragmentsRef?.core?.update) {
+          fragmentsRef.core.update(true);
+        }
+      });
+    }
 
     this.world.onCameraChanged.add((camera) => {
-      for (const [, model] of fragments.list) {
-        model.useCamera(camera.three);
+      const cam = camera.three;
+      if (cam && (cam.type === 'PerspectiveCamera' || cam.type === 'OrthographicCamera')) {
+        for (const [, model] of fragments.list) {
+          model.useCamera(cam as any);
+        }
+        if (fragments.core) {
+          fragments.core.update(true);
+        }
       }
-      fragments.core.update(true);
     });
 
     fragments.list.onItemSet.add(({ value: model }) => {
-      model.useCamera(this.world.camera.three);
-      this.world.scene.three.add(model.object);
-      fragments.core.update(true);
+      const cam = this.world.camera.three;
+      if (cam && (cam.type === 'PerspectiveCamera' || cam.type === 'OrthographicCamera')) {
+        model.useCamera(cam as any);
+        this.world.scene.three.add(model.object);
+        if (fragments.core && fragments.core.update) {
+          fragments.core.update(true);
+        }
+      }
     });
 
     return fragments;

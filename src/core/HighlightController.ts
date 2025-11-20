@@ -719,23 +719,14 @@ export class HighlightController {
 
   /**
    * Highlight parameters with their original statuses preserved – BATCHED
+   * @deprecated Unused method - kept for potential future use
    */
-  private async highlightWithOriginalStatusesBatched(
-    parameterGroups: ParameterGroup[]
+  // @ts-ignore - Unused method kept for potential future use
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private async _highlightWithOriginalStatusesBatched(
+    _parameterGroups: ParameterGroup[]
   ): Promise<void> {
-    if (!parameterGroups.length) return;
-
-    const inProgressItems = parameterGroups.filter(
-      (g) => g.originalStatus === "IN_PROGRESS"
-    );
-    const completedItems = parameterGroups.filter(
-      (g) => g.originalStatus === "COMPLETED"
-    );
-
-    await Promise.all([
-      this.highlightPreprocessedDataBatched(inProgressItems, "IN_PROGRESS"),
-      this.highlightPreprocessedDataBatched(completedItems, "COMPLETED"),
-    ]);
+    // Method intentionally empty - kept for future use
   }
 
   /**
@@ -1107,7 +1098,7 @@ export class HighlightController {
 
       // Collect all local IDs for this params combination
       const allLocalIds: number[] = [];
-      for (const [modelId, localIds] of itemsToHighlight) {
+      for (const [_modelId, localIds] of itemsToHighlight) {
         allLocalIds.push(...Array.from(localIds));
       }
 

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Building2, BarChart3, Activity, Clock, Users, Shield, ArrowRight, CheckCircle, Zap, Globe, Award, TrendingUp, Cuboid as Cube, Eye, Layers, Monitor, Smartphone, Tablet } from 'lucide-react'
+import { Activity, Clock, ArrowRight, CheckCircle, Zap, TrendingUp, Cuboid as Cube, Eye, Layers, Monitor } from 'lucide-react'
 import { DarkModeToggle } from './DarkModeToggle'
 
 interface LandingPageProps {
@@ -266,7 +266,7 @@ export function LandingPage({ onGetStarted, onAboutUs }: LandingPageProps) {
                 { number: 'Real-time', label: 'Progress Updates' },
                 { number: 'P6', label: 'Integration' },
                 { number: '3D', label: 'Visualization' }
-              ].map((stat, index) => (
+              ].map((stat) => (
                 <div key={stat.label} className="text-center">
                   <div className="text-3xl font-bold text-red-600 dark:text-red-400 mb-2 transition-colors duration-300">{stat.number}</div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 transition-colors duration-300">{stat.label}</div>

@@ -1,6 +1,5 @@
 import { HiderPanel } from "../core/HiderPanel";
 import { HighlightController } from "../core/HighlightController";
-import { Highlighter } from "../core/Highlighter";
 import { ModelManager } from "../core/ModelManager";
 import { SceneManager } from "../core/SceneManager";
 import { ExcelDataPanel } from "../core/ExcelDataPanel";
@@ -16,7 +15,8 @@ export class BimViewerApp {
   private controller!: HighlightController;
   private viewsManager!: ViewsManager;
   private rightPanelsContainer!: RightPanelsContainer;
-  private detailsWindow!: DetailsWindow;
+  // @ts-ignore - DetailsWindow handles its own UI internally
+  private _detailsWindow!: DetailsWindow;
 
   constructor(containerId: string) {
     this.sceneManager = new SceneManager(containerId);
@@ -77,7 +77,7 @@ export class BimViewerApp {
     // Set up event listeners for Excel data interaction
     this.setupExcelIntegration();
 
-    this.detailsWindow = new DetailsWindow(
+    this._detailsWindow = new DetailsWindow(
       this.sceneManager,
       this.modelManager,
       this.controller
@@ -95,7 +95,7 @@ export class BimViewerApp {
   private setupExcelIntegration(): void {
     // Listen for Excel row selection events
     document.addEventListener("excelRowSelected", (event: any) => {
-      const { data, index } = event.detail;
+      const { data } = event.detail;
       console.log("Excel row selected in BIM viewer:", data);
 
       // Example: Highlight BIM elements based on Excel data

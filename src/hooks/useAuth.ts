@@ -99,6 +99,7 @@ export function useAuth() {
     }
 
     const init = async () => {
+      if (!supabase) return;
       try {
         console.log('[Auth] Checking for existing session...')
         const { data, error } = await supabase.auth.getSession()
@@ -123,6 +124,7 @@ export function useAuth() {
         }
 
         console.log('[Auth] Setting up auth state listener...')
+        if (!supabase) return;
         const { data: listener } = supabase.auth.onAuthStateChange(
           async (event, newSession) => {
             if (unsubscribed) {
@@ -309,11 +311,11 @@ export function useAuth() {
           aud: 'authenticated'
         } as User
 
-        const demoProfile = {
+        const demoProfile: UserProfile = {
           id: 'demo-admin-id',
           email: 'admin@construction.com',
           full_name: 'System Administrator',
-          role: 'admin',
+          role: 'admin' as const,
           company: 'Construction Co.',
           position: 'Administrator',
           avatar_url: null,

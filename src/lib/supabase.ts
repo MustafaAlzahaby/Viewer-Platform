@@ -43,6 +43,7 @@ export interface Project {
   description?: string
   model_url?: string
   excel_url?: string
+  image_url?: string
   baseline_data?: any
   created_by: string
   created_at: string
