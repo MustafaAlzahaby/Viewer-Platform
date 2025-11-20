@@ -10,13 +10,22 @@
   },
 
   "levels": {
-    "Level 00": ["ground floor"],
-    "Level 01": ["first floor", "level 01", "floor 01", "level 1", "floor 1"],
-    "Level 02": ["second floor", "level 02", "floor 02", "level 2", "floor 2"],
-    "level 03": ["third floor", "level 03", "floor 03", "level 3", "floor 3"],
-    "level 04": ["fourth floor", "level 04", "floor 04", "level 4", "floor 4"],
-    "LEVEL 01": ["03 floor"],
-    "Roof": ["roof"]
+    "[\"Level 00\", \"01-Ground F.F.L\", \"LEVEL 00 -@2.6\"]": ["ground floor"],
+    "[\"Mechanical 15\",\"Mechanical 14\",\"Level 01\",\"LEVEL 00\",\"LEVEL 00 _@2.6\"]": [
+      "first floor",
+      "level 01",
+      "floor 01",
+      "level 1",
+      "floor 1"
+    ],
+    "[\"Level 30\",\"LEVEL 02\", \"Level 35\", \"Mechanical 16\", \"Level 02\", \"Level 23\", \"Level 28\", \"Mechanical 14\", \"03-First F.F.L\"]": [
+      "second floor",
+      "level 02",
+      "floor 02",
+      "level 2",
+      "floor 2"
+    ],
+    "[\"Roof\",\"Mechanical 35\",\"ROOF\"]": ["roof, roof floor"]
   },
 
   "category": {
@@ -100,5 +109,13 @@
     "floors": "#000080",
     "windowDoor": "#3f2180",
     "ceiling": "#396985"
+  },
+
+  "levelGroups": {
+    "Basement": ["Mechanical 32", "Basement 02", "BASEMENT 02", "Basement 01"],
+    "Ground": ["01-Ground F.F.L", "LEVEL 00 -@2.6", "Level 00"],
+    "First Floor": ["Mechanical 15", "Mechanical 14", "Level 01", "LEVEL 00", "LEVEL 00 _@2.6", "Mechanical 15"],
+    "Second Floor": ["Level 30", "LEVEL 02", "Level 35", "Mechanical 16", "Level 02", "Level 23", "Level 28", "Mechanical 14", "03-First F.F.L"],
+    "Roof": ["Mechanical 35", "Roof", "ROOF"]
   }
 }

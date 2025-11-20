@@ -42,22 +42,10 @@ export class BimViewerApp {
     this.controller = new HighlightController(this.modelManager, this.hider);
     await this.controller.initializeAfterModelLoad();
 
-    
-    // Read project data from sessionStorage (set by parent window)
-    const projectData = (window as any).currentProject || JSON.parse(sessionStorage.getItem('currentProject') || '{}');
-    const configPath = projectData.config_url || "./config.json";
-    const excelPath = projectData.excel_url || "./excel-sheet/data.xlsx";
-    const guidsPath = projectData.guids_url || "./guids/guids.json";
-    
-    console.log('[BimViewerApp] Loading project:', projectData.name);
-    console.log('[BimViewerApp] Config:', configPath);
-    console.log('[BimViewerApp] Excel:', excelPath);
-    console.log('[BimViewerApp] Guids:', guidsPath);
-
-        await this.controller.initialize(
-      configPath,
-      excelPath,
-      guidsPath
+    await this.controller.initialize(
+      "./config.json",
+      "./excel-sheet/data.xlsx",
+      "./guids/guids.json"
     );
     (window as any).controller = this.controller;
 
@@ -78,7 +66,7 @@ export class BimViewerApp {
 
     // Load Excel data - specify your column names here
     await this.excelPanel.loadExcelData(
-      excelPath,
+      "./excel-sheet/data.xlsx",
       "Activity Name", // Replace with your first column name
       "Performance % Complete" // Replace with your second column name
     );
