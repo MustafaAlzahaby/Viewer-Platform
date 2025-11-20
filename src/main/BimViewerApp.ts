@@ -85,9 +85,6 @@ export class BimViewerApp {
 
     // Initialize Excel data panel
     this.excelPanel = new ExcelDataPanel("container");
-
-    // Use project Excel URL if available, otherwise fallback to default
-    const excelUrl = projectData.excel_url || "./excel-sheet/data.xlsx";
     
     try {
       // Load Excel data - specify your column names here
