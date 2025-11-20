@@ -13,11 +13,13 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        main: 'index.html',
-        viewer: 'public/viewer.html'
+        main: path.resolve(__dirname, 'index.html'),
+        viewer: path.resolve(__dirname, 'viewer.html')
       }
-    }
+    },
+    copyPublicDir: true
   },
+  publicDir: 'public',
   server: {
     open: true
   },

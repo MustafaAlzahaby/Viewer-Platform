@@ -11,9 +11,50 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/icon?family=Material+Icons"
     />
-    <link rel="stylesheet" href="/styles.css" />
     <link rel="icon" type="image/x-icon" href="/Rowad-Logo.ico" />
     <title>BIM Viewer</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #0f172a;
+        color: #f8fafc;
+        overflow: hidden;
+      }
+      .full-screen {
+        width: 100vw;
+        height: 100vh;
+        position: relative;
+      }
+      #loading-spinner {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(15, 23, 42, 0.95);
+        z-index: 10000;
+      }
+      #loading-spinner > div {
+        width: 48px;
+        height: 48px;
+        border: 6px solid #3b82f6;
+        border-top: 6px solid transparent;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+    </style>
   </head>
   <body>
     <div class="full-screen" id="container"></div>
@@ -22,7 +63,7 @@
     </div>
     
     <!-- Session isolation script - runs BEFORE main.ts -->
-    <script type="module">
+    <script>
       // ✅ Prevent this viewer tab from interfering with parent window's auth state
       console.log('[Viewer] Initializing isolated session...')
       
