@@ -59,7 +59,13 @@ export class BimViewerApp {
       this.hider,
       this.viewsManager
     );
-    this.rightPanelsContainer.initialize();
+    try {
+      await this.rightPanelsContainer.initialize();
+      console.log("✅ Right panels container initialized successfully");
+    } catch (error) {
+      console.error("❌ Failed to initialize right panels container:", error);
+      // Continue execution even if panels fail to initialize
+    }
 
     // Initialize Excel data panel
     this.excelPanel = new ExcelDataPanel("container");
