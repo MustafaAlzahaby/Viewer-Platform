@@ -41,172 +41,39 @@ export class ModelManager {
       }
       console.log('[ModelManager] Loading model from project:', fragPaths);
     } else {
-      // Fallback to default models - load only 2 models to avoid memory issues
-      // Start with fewer models, user can load more if needed
-      fragPaths = ["/models/z5.frag", "/models/z2.frag"];
-      console.log('[ModelManager] Using default models (reduced set to avoid memory issues):', fragPaths);
-      console.log('[ModelManager] Note: Loading 2 models instead of 5 to prevent memory exhaustion');
+      // Fallback to default models (all 5 zones - original fast loading)
+      fragPaths = ["/models/z5.frag", "/models/z2.frag", "/models/z3.frag", "/models/z4.frag", "/models/z1.frag"];
+      console.log('[ModelManager] Using default models:', fragPaths);
     }
     
     // Ensure all paths are absolute (start with /)
     fragPaths = fragPaths.map(path => {
-      // Remove leading ./ if present
       const cleanPath = path.replace(/^\.\//, '');
-      // Add leading / if not present
       return cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
     });
-    
-    console.log('[ModelManager] Final model paths:', fragPaths);
-    
-    // Test if we can access the public folder and log the base URL
-    console.log('[ModelManager] Current window location:', window.location.href);
-    console.log('[ModelManager] Base URL:', window.location.origin);
-    try {
-      const testResponse = await fetch('/Rowad-Logo.ico', { method: 'HEAD' });
-      console.log('[ModelManager] Public folder accessibility test:', testResponse.ok ? 'OK' : 'FAILED', testResponse.status);
-      if (!testResponse.ok) {
-        console.error('[ModelManager] Public folder test failed with status:', testResponse.status, testResponse.statusText);
-      }
-    } catch (e) {
-      console.error('[ModelManager] Public folder test failed:', e);
-    }
 
-    // Load models sequentially (simpler, more reliable for large files)
-    const results: any[] = [];
-    
-    for (let i = 0; i < fragPaths.length; i++) {
-      const path = fragPaths[i];
-      const modelId = path.split("/").pop()?.split(".").shift();
-      
-      if (!modelId) {
-        console.error(`[ModelManager] Invalid model path: ${path}`);
-        results.push(null);
-        continue;
-      }
+    // Original simple parallel loading (fast and efficient)
+    await Promise.all(
+      fragPaths.map(async (path) => {
+        const modelId = path.split("/").pop()?.split(".").shift();
+        if (!modelId) return null;
 
-      try {
-        console.log(`[ModelManager] Loading ${i + 1}/${fragPaths.length}: ${path}`);
-        
-        // Fetch with timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
-        
-        let file: Response;
         try {
-          file = await fetch(path, { 
-            signal: controller.signal,
-            cache: 'default'
-          });
-          clearTimeout(timeoutId);
-        } catch (fetchError: any) {
-          clearTimeout(timeoutId);
-          if (fetchError.name === 'AbortError') {
-            throw new Error(`Timeout loading ${path}`);
+          const file = await fetch(path);
+          if (!file.ok) {
+            console.warn(`[ModelManager] Failed to load ${path}: ${file.statusText}`);
+            return null;
           }
-          throw fetchError;
-        }
-        
-        if (!file.ok) {
-          throw new Error(`HTTP ${file.status}: ${file.statusText}`);
-        }
-        
-        // Convert to arrayBuffer with memory management and timeout
-        console.log(`[ModelManager] Reading file data for ${path}...`);
-        
-        // Get content length for memory check
-        const contentLength = file.headers.get('content-length');
-        const fileSizeMB = contentLength ? (parseInt(contentLength) / 1024 / 1024) : 0;
-        console.log(`[ModelManager] File size: ${fileSizeMB.toFixed(2)} MB`);
-        
-        // Warn if file is very large
-        if (fileSizeMB > 50) {
-          console.warn(`[ModelManager] ⚠️ Large file detected (${fileSizeMB.toFixed(2)} MB). This may take 10-30 seconds...`);
-        }
-        
-        // Convert to arrayBuffer with aggressive timeout and progress tracking
-        let buffer: ArrayBuffer;
-        const startTime = Date.now();
-        
-        try {
-          console.log(`[ModelManager] Starting arrayBuffer conversion (this may take 10-30 seconds for ${fileSizeMB.toFixed(2)} MB file)...`);
-          
-          // Try using blob first, then arrayBuffer (sometimes more memory efficient)
-          let arrayBufferPromise: Promise<ArrayBuffer>;
-          
-          // For large files, try blob approach first
-          if (fileSizeMB > 20) {
-            console.log(`[ModelManager] Using blob() approach for large file...`);
-            const blob = await file.blob();
-            arrayBufferPromise = blob.arrayBuffer();
-          } else {
-            arrayBufferPromise = file.arrayBuffer();
-          }
-          
-          // Progress logging
-          const progressCheck = setInterval(() => {
-            const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-            console.log(`[ModelManager] Still loading ${path}... (${elapsed}s elapsed, be patient for large files)`);
-          }, 5000); // Log every 5 seconds
-          
-          // Timeout protection
-          const timeoutPromise = new Promise<never>((_, reject) => 
-            setTimeout(() => {
-              clearInterval(progressCheck);
-              reject(new Error('arrayBuffer conversion timeout (120s) - file may be too large or browser is low on memory'));
-            }, 120000) // 120 second timeout for large files
-          );
-          
-          buffer = await Promise.race([arrayBufferPromise, timeoutPromise]);
-          clearInterval(progressCheck);
-          
-          const loadTime = ((Date.now() - startTime) / 1000).toFixed(1);
-          console.log(`[ModelManager] ✓ File loaded: ${path}, size: ${(buffer.byteLength / 1024 / 1024).toFixed(2)} MB (took ${loadTime}s)`);
-        } catch (bufferError) {
-          const errorMsg = bufferError instanceof Error ? bufferError.message : String(bufferError);
-          console.error(`[ModelManager] ✗ Failed to convert ${path} to arrayBuffer:`, errorMsg);
-          console.error(`[ModelManager] This usually means:`);
-          console.error(`[ModelManager]   1) File is too large for available browser memory`);
-          console.error(`[ModelManager]   2) Browser is low on memory (close other tabs)`);
-          console.error(`[ModelManager]   3) Network is slow (file is still downloading)`);
-          console.error(`[ModelManager] Solutions: Close other tabs, restart browser, or reduce number of models`);
-          throw new Error(`Memory/timeout error loading ${path}: ${errorMsg}`);
-        }
+          const buffer = await file.arrayBuffer();
 
-        if (buffer.byteLength === 0) {
-          throw new Error(`Empty file: ${path}`);
+          this.modelIds.push(modelId);
+          return fragments.core.load(buffer, { modelId });
+        } catch (error) {
+          console.error(`[ModelManager] Error loading ${path}:`, error);
+          return null;
         }
-
-        // Load into fragments
-        console.log(`[ModelManager] Loading fragment: ${modelId}...`);
-        this.modelIds.push(modelId);
-        const loadedFragment = await fragments.core.load(buffer, { modelId });
-        console.log(`[ModelManager] ✓ Successfully loaded: ${modelId}`);
-        results.push(loadedFragment);
-        
-        // Force garbage collection hint and small delay between loads
-        // This helps prevent memory exhaustion with large files
-        if (i < fragPaths.length - 1) {
-          // Small delay to let browser process memory
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        
-        // Clear buffer reference to help with memory (browser will GC when ready)
-        // Note: We can't explicitly null the buffer, but the delay helps
-        
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        console.error(`[ModelManager] ✗ Failed to load ${path}:`, errorMsg);
-        results.push(null);
-        // Continue loading other models even if one fails
-      }
-    }
-    
-    const successfulLoads = results.filter(r => r !== null).length;
-    console.log(`[ModelManager] Loaded ${successfulLoads} out of ${fragPaths.length} models`);
-    
-    if (successfulLoads === 0) {
-      console.error('[ModelManager] ⚠️ No models were successfully loaded!');
-    }
+      })
+    );
 
     return fragments;
   }
