@@ -1,5 +1,5 @@
 import * as OBC from "@thatopen/components";
-import * as THREE from "three";
+//import * as THREE from "three";
 
 export class ModelManager {
   private world: OBC.World;
