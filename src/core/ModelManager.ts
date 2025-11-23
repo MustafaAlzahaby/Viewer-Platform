@@ -41,9 +41,11 @@ export class ModelManager {
       }
       console.log('[ModelManager] Loading model from project:', fragPaths);
     } else {
-      // Fallback to default models (use absolute paths)
-      fragPaths = ["/models/z5.frag", "/models/z2.frag", "/models/z3.frag", "/models/z4.frag", "/models/z1.frag"];
-      console.log('[ModelManager] Using default models:', fragPaths);
+      // Fallback to default models - load only 2 models to avoid memory issues
+      // Start with fewer models, user can load more if needed
+      fragPaths = ["/models/z5.frag", "/models/z2.frag"];
+      console.log('[ModelManager] Using default models (reduced set to avoid memory issues):', fragPaths);
+      console.log('[ModelManager] Note: Loading 2 models instead of 5 to prevent memory exhaustion');
     }
     
     // Ensure all paths are absolute (start with /)
@@ -117,23 +119,56 @@ export class ModelManager {
         console.log(`[ModelManager] File size: ${fileSizeMB.toFixed(2)} MB`);
         
         // Warn if file is very large
-        if (fileSizeMB > 100) {
-          console.warn(`[ModelManager] ⚠️ Large file detected (${fileSizeMB.toFixed(2)} MB). This may take a while...`);
+        if (fileSizeMB > 50) {
+          console.warn(`[ModelManager] ⚠️ Large file detected (${fileSizeMB.toFixed(2)} MB). This may take 10-30 seconds...`);
         }
         
-        // Convert to arrayBuffer with timeout protection
+        // Convert to arrayBuffer with aggressive timeout and progress tracking
         let buffer: ArrayBuffer;
+        const startTime = Date.now();
+        
         try {
-          const arrayBufferPromise = file.arrayBuffer();
+          console.log(`[ModelManager] Starting arrayBuffer conversion (this may take 10-30 seconds for ${fileSizeMB.toFixed(2)} MB file)...`);
+          
+          // Try using blob first, then arrayBuffer (sometimes more memory efficient)
+          let arrayBufferPromise: Promise<ArrayBuffer>;
+          
+          // For large files, try blob approach first
+          if (fileSizeMB > 20) {
+            console.log(`[ModelManager] Using blob() approach for large file...`);
+            const blob = await file.blob();
+            arrayBufferPromise = blob.arrayBuffer();
+          } else {
+            arrayBufferPromise = file.arrayBuffer();
+          }
+          
+          // Progress logging
+          const progressCheck = setInterval(() => {
+            const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+            console.log(`[ModelManager] Still loading ${path}... (${elapsed}s elapsed, be patient for large files)`);
+          }, 5000); // Log every 5 seconds
+          
+          // Timeout protection
           const timeoutPromise = new Promise<never>((_, reject) => 
-            setTimeout(() => reject(new Error('arrayBuffer conversion timeout (60s)')), 60000)
+            setTimeout(() => {
+              clearInterval(progressCheck);
+              reject(new Error('arrayBuffer conversion timeout (120s) - file may be too large or browser is low on memory'));
+            }, 120000) // 120 second timeout for large files
           );
           
           buffer = await Promise.race([arrayBufferPromise, timeoutPromise]);
-          console.log(`[ModelManager] File loaded: ${path}, size: ${(buffer.byteLength / 1024 / 1024).toFixed(2)} MB`);
+          clearInterval(progressCheck);
+          
+          const loadTime = ((Date.now() - startTime) / 1000).toFixed(1);
+          console.log(`[ModelManager] ✓ File loaded: ${path}, size: ${(buffer.byteLength / 1024 / 1024).toFixed(2)} MB (took ${loadTime}s)`);
         } catch (bufferError) {
           const errorMsg = bufferError instanceof Error ? bufferError.message : String(bufferError);
-          console.error(`[ModelManager] Failed to convert ${path} to arrayBuffer:`, errorMsg);
+          console.error(`[ModelManager] ✗ Failed to convert ${path} to arrayBuffer:`, errorMsg);
+          console.error(`[ModelManager] This usually means:`);
+          console.error(`[ModelManager]   1) File is too large for available browser memory`);
+          console.error(`[ModelManager]   2) Browser is low on memory (close other tabs)`);
+          console.error(`[ModelManager]   3) Network is slow (file is still downloading)`);
+          console.error(`[ModelManager] Solutions: Close other tabs, restart browser, or reduce number of models`);
           throw new Error(`Memory/timeout error loading ${path}: ${errorMsg}`);
         }
 
