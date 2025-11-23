@@ -69,77 +69,68 @@ export class ModelManager {
       console.error('[ModelManager] Public folder test failed:', e);
     }
 
-    const loadResults = await Promise.allSettled(
-      fragPaths.map(async (path) => {
-        const modelId = path.split("/").pop()?.split(".").shift();
-        if (!modelId) {
-          throw new Error(`Invalid model path: ${path}`);
-        }
+    // Load models sequentially (simpler, more reliable for large files)
+    const results: any[] = [];
+    
+    for (let i = 0; i < fragPaths.length; i++) {
+      const path = fragPaths[i];
+      const modelId = path.split("/").pop()?.split(".").shift();
+      
+      if (!modelId) {
+        console.error(`[ModelManager] Invalid model path: ${path}`);
+        results.push(null);
+        continue;
+      }
 
-        console.log(`[ModelManager] Fetching model from: ${path}`);
+      try {
+        console.log(`[ModelManager] Loading ${i + 1}/${fragPaths.length}: ${path}`);
         
-        // Add timeout to fetch (30 seconds)
+        // Fetch with timeout
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
         
         let file: Response;
         try {
-          console.log(`[ModelManager] Starting fetch for ${path}...`);
-          const fetchStartTime = Date.now();
           file = await fetch(path, { 
             signal: controller.signal,
-            cache: 'no-cache' // Ensure we're not getting cached errors
+            cache: 'default'
           });
-          const fetchDuration = Date.now() - fetchStartTime;
-          console.log(`[ModelManager] Fetch completed for ${path} in ${fetchDuration}ms, status: ${file.status}`);
           clearTimeout(timeoutId);
         } catch (fetchError: any) {
           clearTimeout(timeoutId);
-          console.error(`[ModelManager] Fetch error for ${path}:`, fetchError);
           if (fetchError.name === 'AbortError') {
-            throw new Error(`Timeout loading ${path} (30s)`);
-          } else {
-            throw new Error(`Network error loading ${path}: ${fetchError.message || 'Unknown error'}`);
+            throw new Error(`Timeout loading ${path}`);
           }
+          throw fetchError;
         }
         
-        console.log(`[ModelManager] Checking response for ${path}, ok: ${file.ok}, status: ${file.status}`);
         if (!file.ok) {
-          const errorMsg = `HTTP ${file.status}: ${file.statusText}`;
-          console.error(`[ModelManager] Failed to load ${path}: ${errorMsg}`);
-          console.error(`[ModelManager] Response headers:`, Object.fromEntries(file.headers.entries()));
-          throw new Error(errorMsg);
+          throw new Error(`HTTP ${file.status}: ${file.statusText}`);
         }
         
-        console.log(`[ModelManager] Converting response to arrayBuffer for ${path}...`);
+        // Convert to arrayBuffer with progress tracking
+        console.log(`[ModelManager] Reading file data for ${path}...`);
         const buffer = await file.arrayBuffer();
-        console.log(`[ModelManager] Loaded ${path}, size: ${buffer.byteLength} bytes`);
+        console.log(`[ModelManager] File loaded: ${path}, size: ${(buffer.byteLength / 1024 / 1024).toFixed(2)} MB`);
 
         if (buffer.byteLength === 0) {
-          throw new Error(`Empty file loaded from ${path}`);
+          throw new Error(`Empty file: ${path}`);
         }
 
-        console.log(`[ModelManager] Loading fragment into core for ${modelId}...`);
-        this.modelIds.push(modelId); // Save the modelId
-        const fragmentLoadStart = Date.now();
+        // Load into fragments
+        console.log(`[ModelManager] Loading fragment: ${modelId}...`);
+        this.modelIds.push(modelId);
         const loadedFragment = await fragments.core.load(buffer, { modelId });
-        const fragmentLoadDuration = Date.now() - fragmentLoadStart;
-        console.log(`[ModelManager] Successfully loaded fragment for model: ${modelId} in ${fragmentLoadDuration}ms`);
-        return loadedFragment;
-      })
-    );
-    
-    // Process results from Promise.allSettled
-    const results = loadResults.map((result, index) => {
-      const path = fragPaths[index];
-      if (result.status === 'fulfilled') {
-        return result.value;
-      } else {
-        const reason = result.reason instanceof Error ? result.reason.message : String(result.reason);
-        console.error(`[ModelManager] Failed to load ${path}:`, reason);
-        return null;
+        console.log(`[ModelManager] ✓ Successfully loaded: ${modelId}`);
+        results.push(loadedFragment);
+        
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.error(`[ModelManager] ✗ Failed to load ${path}:`, errorMsg);
+        results.push(null);
+        // Continue loading other models even if one fails
       }
-    });
+    }
     
     const successfulLoads = results.filter(r => r !== null).length;
     console.log(`[ModelManager] Loaded ${successfulLoads} out of ${fragPaths.length} models`);
