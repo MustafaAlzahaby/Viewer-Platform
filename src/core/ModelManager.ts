@@ -41,32 +41,56 @@ export class ModelManager {
       }
       console.log('[ModelManager] Loading model from project:', fragPaths);
     } else {
-      // Fallback to default models
-      fragPaths = ["models/z5.frag", "models/z2.frag", "models/z3.frag", "models/z4.frag", "models/z1.frag"];
+      // Fallback to default models (use absolute paths)
+      fragPaths = ["/models/z5.frag", "/models/z2.frag", "/models/z3.frag", "/models/z4.frag", "/models/z1.frag"];
       console.log('[ModelManager] Using default models:', fragPaths);
     }
+    
+    // Ensure all paths are absolute (start with /)
+    fragPaths = fragPaths.map(path => {
+      // Remove leading ./ if present
+      const cleanPath = path.replace(/^\.\//, '');
+      // Add leading / if not present
+      return cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
+    });
+    
+    console.log('[ModelManager] Final model paths:', fragPaths);
 
-    await Promise.all(
+    const loadResults = await Promise.all(
       fragPaths.map(async (path) => {
         const modelId = path.split("/").pop()?.split(".").shift();
-        if (!modelId) return null;
+        if (!modelId) {
+          console.warn(`[ModelManager] Invalid model path: ${path}`);
+          return null;
+        }
 
         try {
+          console.log(`[ModelManager] Fetching model from: ${path}`);
           const file = await fetch(path);
           if (!file.ok) {
-            console.warn(`[ModelManager] Failed to load ${path}: ${file.statusText}`);
+            console.error(`[ModelManager] Failed to load ${path}: ${file.status} ${file.statusText}`);
             return null;
           }
           const buffer = await file.arrayBuffer();
+          console.log(`[ModelManager] Loaded ${path}, size: ${buffer.byteLength} bytes`);
 
           this.modelIds.push(modelId); // Save the modelId
-          return fragments.core.load(buffer, { modelId });
+          const loadedFragment = await fragments.core.load(buffer, { modelId });
+          console.log(`[ModelManager] Successfully loaded fragment for model: ${modelId}`);
+          return loadedFragment;
         } catch (error) {
           console.error(`[ModelManager] Error loading ${path}:`, error);
           return null;
         }
       })
     );
+    
+    const successfulLoads = loadResults.filter(r => r !== null).length;
+    console.log(`[ModelManager] Loaded ${successfulLoads} out of ${fragPaths.length} models`);
+    
+    if (successfulLoads === 0) {
+      console.error('[ModelManager] ⚠️ No models were successfully loaded!');
+    }
 
     return fragments;
   }

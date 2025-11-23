@@ -89,8 +89,17 @@
           const project = JSON.parse(storedProject)
           window.currentProject = project
           console.log('[Viewer] Project loaded:', project.name)
+          console.log('[Viewer] Full project data:', project)
           console.log('[Viewer] Model URL:', project.model_url)
           console.log('[Viewer] Excel URL:', project.excel_url)
+          
+          // If model_url or excel_url are missing, log a warning
+          if (!project.model_url) {
+            console.warn('[Viewer] ⚠️ No model_url in project data, will use default models')
+          }
+          if (!project.excel_url) {
+            console.warn('[Viewer] ⚠️ No excel_url in project data, will use default Excel file')
+          }
         } catch (error) {
           console.error('[Viewer] Failed to parse project data:', error)
         }

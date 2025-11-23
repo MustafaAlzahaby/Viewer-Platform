@@ -87,6 +87,13 @@ function App() {
 
   const handleOpenViewer = async (project: Project) => {
     console.log('[App] Opening viewer for project:', project.name)
+    console.log('[App] Project data:', {
+      id: project.id,
+      name: project.name,
+      model_url: project.model_url,
+      excel_url: project.excel_url,
+      description: project.description
+    })
     setSelectedProject(project)
 
     sessionStorage.setItem('currentProject', JSON.stringify(project))
