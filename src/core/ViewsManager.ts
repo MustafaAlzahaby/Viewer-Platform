@@ -522,7 +522,8 @@ export class ViewsManager {
       const target = center.clone();
       target.y = elevation;
 
-      await (this.views.create as any)({
+      // @ts-expect-error - views.create signature expects 2-3 args but object form works at runtime
+      await this.views.create({
         name: String(name),
         world: this.world,
         camera: {
@@ -569,7 +570,8 @@ export class ViewsManager {
           const target = center.clone();
           target.y = level.elevation;
 
-          await (this.views.create as any)({
+          // @ts-expect-error - views.create signature expects 2-3 args but object form works at runtime
+          await this.views.create({
             name: level.name,
             world: this.world,
             camera: {
