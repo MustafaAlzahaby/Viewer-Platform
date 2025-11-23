@@ -36,7 +36,7 @@ export class ModelManager {
       "models/z3.frag",
       "models/z4.frag",
       "models/z5.frag",
-      "models/z6.frag"  // REQUIRED for IFC storeys
+      "models/zone 6.frag"  // REQUIRED for IFC storeys
     ];
 
     let fragPaths: string[] = [];
