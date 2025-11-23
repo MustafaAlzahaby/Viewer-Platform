@@ -17,7 +17,9 @@ export default defineConfig({
         viewer: path.resolve(__dirname, 'viewer.html')
       }
     },
-    copyPublicDir: true
+    copyPublicDir: true,
+    outDir: 'dist',
+    manifest: true
   },
   publicDir: 'public',
   server: {
