@@ -110,7 +110,10 @@ function App() {
       }
     }
 
-    window.open('/viewer.html', '_blank')
+    // Use absolute URL to ensure correct routing
+    const viewerUrl = window.location.origin + '/viewer.html'
+    console.log('[App] Opening viewer at:', viewerUrl)
+    window.open(viewerUrl, '_blank')
 
     setTimeout(() => {
       sessionStorage.removeItem('supabaseSession')
