@@ -56,27 +56,54 @@ export class ModelManager {
     });
 
     // Original simple parallel loading (fast and efficient)
-    await Promise.all(
+    const loadResults = await Promise.all(
       fragPaths.map(async (path) => {
         const modelId = path.split("/").pop()?.split(".").shift();
-        if (!modelId) return null;
+        if (!modelId) {
+          console.warn(`[ModelManager] Invalid model path: ${path}`);
+          return null;
+        }
 
         try {
+          console.log(`[ModelManager] Fetching ${path}...`);
           const file = await fetch(path);
           if (!file.ok) {
             console.warn(`[ModelManager] Failed to load ${path}: ${file.statusText}`);
             return null;
           }
           const buffer = await file.arrayBuffer();
+          console.log(`[ModelManager] Loaded ${path}, size: ${(buffer.byteLength / 1024 / 1024).toFixed(2)} MB`);
 
           this.modelIds.push(modelId);
-          return fragments.core.load(buffer, { modelId });
+          const loadedFragment = await fragments.core.load(buffer, { modelId });
+          console.log(`[ModelManager] Fragment loaded for model: ${modelId}`);
+          
+          // Ensure the model is added to the scene
+          if (loadedFragment && loadedFragment.object) {
+            const cam = this.world.camera.three;
+            if (cam && (cam.type === 'PerspectiveCamera' || cam.type === 'OrthographicCamera')) {
+              loadedFragment.useCamera(cam as any);
+              this.world.scene.three.add(loadedFragment.object);
+              console.log(`[ModelManager] Model ${modelId} added to scene`);
+            }
+          }
+          
+          return loadedFragment;
         } catch (error) {
           console.error(`[ModelManager] Error loading ${path}:`, error);
           return null;
         }
       })
     );
+
+    const successfulLoads = loadResults.filter(r => r !== null).length;
+    console.log(`[ModelManager] Successfully loaded ${successfulLoads} out of ${fragPaths.length} models`);
+    
+    // Update fragments core after all models are loaded
+    if (fragments.core && fragments.core.update) {
+      fragments.core.update(true);
+      console.log(`[ModelManager] Fragments core updated`);
+    }
 
     return fragments;
   }
