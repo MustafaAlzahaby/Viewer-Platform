@@ -525,6 +525,7 @@ export class ViewsManager {
       const target = center.clone();
       target.y = elevation;
 
+      // @ts-expect-error - views.create signature expects 2-3 args but object form works at runtime
       await this.views.create({
         name: String(name),
         world: this.world,
@@ -533,7 +534,7 @@ export class ViewsManager {
           target,
           up: new THREE.Vector3(0, 0, -1),
         },
-      } as any);
+      });
 
       // console.log(`Created view: ${name} at elevation ${elevation}`);
     } catch (error) {
@@ -572,6 +573,7 @@ export class ViewsManager {
           const target = center.clone();
           target.y = level.elevation;
 
+          // @ts-expect-error - views.create signature expects 2-3 args but object form works at runtime
           await this.views.create({
             name: level.name,
             world: this.world,
@@ -580,7 +582,7 @@ export class ViewsManager {
               target,
               up: new THREE.Vector3(0, 0, -1),
             },
-          } as any);
+          });
 
           // console.log(`Created default view: ${level.name}`);
         } catch (error) {
