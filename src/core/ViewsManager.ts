@@ -3,10 +3,8 @@ import * as BUI from "@thatopen/ui";
 import * as THREE from "three";
 
 export class ViewsManager {
-  private _components: OBC.Components;
   private views: OBC.Views;
   private world: OBC.World;
-  private _caster: OBC.SimpleRaycaster;
   public clipper: OBC.Clipper;
   private panel: HTMLElement | null = null;
   private fragmentManager: any;
@@ -21,7 +19,6 @@ export class ViewsManager {
   private slabsInitialized = false;
 
   constructor(components: OBC.Components, world: OBC.World) {
-    this._components = components;
     this.world = world;
 
     // Initialize Views
@@ -31,10 +28,6 @@ export class ViewsManager {
 
     // Fragments manager
     this.fragmentManager = components.get(OBC.FragmentsManager);
-
-    // Raycaster (not used for this feature but kept for your future needs)
-    const casters = components.get(OBC.Raycasters);
-    this._caster = casters.get(world);
 
     this.clipper = components.get(OBC.Clipper);
     this.clipper.enabled = true;
@@ -532,17 +525,15 @@ export class ViewsManager {
       const target = center.clone();
       target.y = elevation;
 
-      await this.views.create(
-        String(name),
-        {
-          world: this.world,
-          camera: {
-            position,
-            target,
-            up: new THREE.Vector3(0, 0, -1),
-          },
-        }
-      );
+      await this.views.create({
+        name: String(name),
+        world: this.world,
+        camera: {
+          position,
+          target,
+          up: new THREE.Vector3(0, 0, -1),
+        },
+      } as any);
 
       // console.log(`Created view: ${name} at elevation ${elevation}`);
     } catch (error) {
@@ -581,17 +572,15 @@ export class ViewsManager {
           const target = center.clone();
           target.y = level.elevation;
 
-          await this.views.create(
-            level.name,
-            {
-              world: this.world,
-              camera: {
-                position,
-                target,
-                up: new THREE.Vector3(0, 0, -1),
-              },
-            }
-          );
+          await this.views.create({
+            name: level.name,
+            world: this.world,
+            camera: {
+              position,
+              target,
+              up: new THREE.Vector3(0, 0, -1),
+            },
+          } as any);
 
           // console.log(`Created default view: ${level.name}`);
         } catch (error) {
@@ -955,8 +944,8 @@ export class ViewsManager {
       for (const method of dmMethods) {
         try {
           if (typeof dataManager[method] === "function") {
-            const _result = dataManager[method]();
-            // console.log(`DataManager.${method}():`, _result);
+            dataManager[method]();
+            // console.log(`DataManager.${method}():`, result);
           }
         } catch (error) {
           // console.log(`DataManager.${method}() failed:`, error);
@@ -1030,13 +1019,13 @@ export class ViewsManager {
         console.log("Full mesh details:", meshDetails); */
       }
 
-      const _ifcTypes = meshDetails.reduce((acc: any, mesh) => {
+      meshDetails.reduce((acc: any, mesh) => {
         const type = mesh.ifcType;
         if (!acc[type]) acc[type] = [];
         acc[type].push(mesh.name);
         return acc;
       }, {});
-      // console.log("Meshes grouped by IFC type:", _ifcTypes);
+      // console.log("Meshes grouped by IFC type:", ifcTypes);
     });
 
     // console.log("=== END MESH LISTING ===");
