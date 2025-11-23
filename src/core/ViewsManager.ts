@@ -3,10 +3,10 @@ import * as BUI from "@thatopen/ui";
 import * as THREE from "three";
 
 export class ViewsManager {
-  private components: OBC.Components;
+  private _components: OBC.Components;
   private views: OBC.Views;
   private world: OBC.World;
-  private caster: OBC.SimpleRaycaster;
+  private _caster: OBC.SimpleRaycaster;
   public clipper: OBC.Clipper;
   private panel: HTMLElement | null = null;
   private fragmentManager: any;
@@ -21,7 +21,7 @@ export class ViewsManager {
   private slabsInitialized = false;
 
   constructor(components: OBC.Components, world: OBC.World) {
-    this.components = components;
+    this._components = components;
     this.world = world;
 
     // Initialize Views
@@ -34,7 +34,7 @@ export class ViewsManager {
 
     // Raycaster (not used for this feature but kept for your future needs)
     const casters = components.get(OBC.Raycasters);
-    this.caster = casters.get(world);
+    this._caster = casters.get(world);
 
     this.clipper = components.get(OBC.Clipper);
     this.clipper.enabled = true;
@@ -142,8 +142,8 @@ export class ViewsManager {
     this.slabElements.clear();
 
     const fragments = this.fragmentManager.list;
-    fragments.forEach((fragment: any, modelId: string) => {
-      // console.log(`Scanning fragment ${modelId} for slabs...`);
+    fragments.forEach((fragment: any, _modelId: string) => {
+      // console.log(`Scanning fragment ${_modelId} for slabs...`);
       this.identifySlabElements(fragment);
     });
 
@@ -165,7 +165,7 @@ export class ViewsManager {
   private tryAlternativeSlabDetection(): void {
     // console.log("Trying alternative slab detection...");
     const fragments = this.fragmentManager.list;
-    fragments.forEach((fragment: any, modelId: string) => {
+    fragments.forEach((fragment: any, _modelId: string) => {
       const fragmentObject = fragment.object;
       if (!fragmentObject) return;
 
@@ -433,8 +433,8 @@ export class ViewsManager {
         return;
       }
 
-      const [modelId, fragment] = Array.from(fragments.entries())[0];
-      // console.log(`Processing fragment: ${modelId}`);
+      const [_modelId, fragment] = Array.from(fragments.entries())[0];
+      // console.log(`Processing fragment: ${_modelId}`);
 
       let spatialElements: any[] = [];
 
@@ -532,15 +532,17 @@ export class ViewsManager {
       const target = center.clone();
       target.y = elevation;
 
-      await this.views.create({
-        name: String(name),
-        world: this.world,
-        camera: {
-          position,
-          target,
-          up: new THREE.Vector3(0, 0, -1),
-        },
-      });
+      await this.views.create(
+        String(name),
+        {
+          world: this.world,
+          camera: {
+            position,
+            target,
+            up: new THREE.Vector3(0, 0, -1),
+          },
+        }
+      );
 
       // console.log(`Created view: ${name} at elevation ${elevation}`);
     } catch (error) {
@@ -579,15 +581,17 @@ export class ViewsManager {
           const target = center.clone();
           target.y = level.elevation;
 
-          await this.views.create({
-            name: level.name,
-            world: this.world,
-            camera: {
-              position,
-              target,
-              up: new THREE.Vector3(0, 0, -1),
-            },
-          });
+          await this.views.create(
+            level.name,
+            {
+              world: this.world,
+              camera: {
+                position,
+                target,
+                up: new THREE.Vector3(0, 0, -1),
+              },
+            }
+          );
 
           // console.log(`Created default view: ${level.name}`);
         } catch (error) {
@@ -898,7 +902,7 @@ export class ViewsManager {
     // console.log("=== END DETAILED INSPECTION ===");
   }
 
-  private inspectFragmentProperty(fragment: any, propertyName: string, displayName: string): void {
+  private inspectFragmentProperty(fragment: any, propertyName: string, _displayName: string): void {
     try {
       if (fragment[propertyName]) {
         // console.log(`\n${displayName}:`, typeof fragment[propertyName]);
@@ -922,19 +926,19 @@ export class ViewsManager {
     }
   }
 
-  private tryGetStoreyData(fragment: any, modelId: string): void {
-    // console.log(`\n--- Trying to get storey data for ${modelId} ---`);
+  private tryGetStoreyData(fragment: any, _modelId: string): void {
+    // console.log(`\n--- Trying to get storey data for ${_modelId} ---`);
 
     const methods = ["getStoreys", "getLevels", "getFloors", "getSpatialElements"];
     for (const method of methods) {
       try {
         if (typeof fragment[method] === "function") {
-          const result = fragment[method]();
-          // console.log(`${method}() returned:`, result);
-          if (result && Array.isArray(result)) {
-            // console.log(`${method}() found ${result.length} items`);
-            result.slice(0, 3).forEach((item: any, index: number) => {
-              // console.log(`  Item ${index}:`, item);
+          const _result = fragment[method]();
+          // console.log(`${method}() returned:`, _result);
+          if (_result && Array.isArray(_result)) {
+            // console.log(`${method}() found ${_result.length} items`);
+            _result.slice(0, 3).forEach((_item: any, _index: number) => {
+              // console.log(`  Item ${_index}:`, _item);
             });
           }
         }
@@ -951,8 +955,8 @@ export class ViewsManager {
       for (const method of dmMethods) {
         try {
           if (typeof dataManager[method] === "function") {
-            const result = dataManager[method]();
-            // console.log(`DataManager.${method}():`, result);
+            const _result = dataManager[method]();
+            // console.log(`DataManager.${method}():`, _result);
           }
         } catch (error) {
           // console.log(`DataManager.${method}() failed:`, error);
@@ -980,8 +984,8 @@ export class ViewsManager {
     // console.log("=== LISTING ALL MESHES IN MODEL ===");
 
     const fragments = this.fragmentManager.list;
-    fragments.forEach((fragment: any, modelId: string) => {
-      // console.log(`\n--- Meshes in fragment: ${modelId} ---`);
+    fragments.forEach((fragment: any, _modelId: string) => {
+      // console.log(`\n--- Meshes in fragment: ${_modelId} ---`);
 
       const fragmentObject = fragment.object;
       if (!fragmentObject) {
@@ -1026,15 +1030,22 @@ export class ViewsManager {
         console.log("Full mesh details:", meshDetails); */
       }
 
-      const ifcTypes = meshDetails.reduce((acc: any, mesh) => {
+      const _ifcTypes = meshDetails.reduce((acc: any, mesh) => {
         const type = mesh.ifcType;
         if (!acc[type]) acc[type] = [];
         acc[type].push(mesh.name);
         return acc;
       }, {});
-      // console.log("Meshes grouped by IFC type:", ifcTypes);
+      // console.log("Meshes grouped by IFC type:", _ifcTypes);
     });
 
     // console.log("=== END MESH LISTING ===");
+  }
+
+  public dispose(): void {
+    // Cleanup if needed
+    this.panel = null;
+    this.slabElements.clear();
+    this.originalSlabMaterials.clear();
   }
 }
