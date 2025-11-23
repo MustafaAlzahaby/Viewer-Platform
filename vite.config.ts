@@ -15,6 +15,15 @@ export default defineConfig({
       input: {
         main: path.resolve(__dirname, 'index.html'),
         viewer: path.resolve(__dirname, 'viewer.html')
+      },
+      output: {
+        // Ensure viewer.html from root is used, not from public
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.name === 'viewer.html') {
+            return 'viewer.html';
+          }
+          return 'assets/[name]-[hash][extname]';
+        }
       }
     },
     copyPublicDir: true,
