@@ -21,7 +21,7 @@ type EditableProject = Project & { _editing?: boolean }
 type Role = 'admin' | 'uploader' | 'viewer'
 
 export function Dashboard({ authState, onOpenViewer, onOpenBaseline, onBackToHome }: DashboardProps) {
-  const { user, profile, signOut, isAdmin, isUploader } = authState
+  const { user, profile, isAdmin, isUploader } = authState
   const [projects, setProjects] = useState<EditableProject[]>([])
   const [loading, setLoading] = useState(true)
   const [hoveredProject, setHoveredProject] = useState<string | null>(null)
@@ -191,16 +191,11 @@ export function Dashboard({ authState, onOpenViewer, onOpenBaseline, onBackToHom
   }
 
   const handleSignOut = async () => {
-    try {
-      console.log('[Dashboard] Sign out clicked')
-      const result = await signOut()
-      console.log('[Dashboard] Sign out result:', result)
-      onBackToHome()
-    } catch (error) {
-      console.error('[Dashboard] Sign out error:', error)
-      // Still navigate to home even if signOut fails
-      onBackToHome()
-    }
+    console.log('[Dashboard] Sign out clicked')
+    
+    // Call the parent handler which manages the full sign out flow
+    // This ensures consistent state management
+    onBackToHome()
   }
 
   const handleAddProject = async (e: React.FormEvent) => {
@@ -510,13 +505,17 @@ return (
             
             {isAdmin && (
               <button
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
                   setSettingsTab('projects')
                   setShowSettings(true)
                   fetchUsers()
                 }}
-                className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-transparent hover:bg-gray-200/70 dark:hover:bg-gray-700/70 rounded-lg transition-all duration-300"
+                className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-transparent hover:bg-gray-200/70 dark:hover:bg-gray-700/70 rounded-lg transition-all duration-300 relative z-50"
                 title="Settings"
+                type="button"
+                style={{ pointerEvents: 'auto' }}
               >
                 <Settings className="w-5 h-5" />
               </button>
@@ -526,19 +525,33 @@ return (
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
-                handleSignOut()
+                console.log('[Dashboard] Sign out button clicked, calling handleSignOut')
+                // Don't await - let it run in background
+                handleSignOut().catch(err => {
+                  console.error('[Dashboard] handleSignOut error:', err)
+                })
+                console.log('[Dashboard] handleSignOut called (non-blocking)')
               }}
-              className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-transparent hover:bg-gray-200/70 dark:hover:bg-gray-700/70 rounded-lg transition-all duration-300"
+              className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-transparent hover:bg-gray-200/70 dark:hover:bg-gray-700/70 rounded-lg transition-all duration-300 relative z-50"
               title="Sign Out"
               type="button"
+              style={{ pointerEvents: 'auto' }}
             >
               <LogOut className="w-5 h-5" />
             </button>
             
             <button
-              onClick={onBackToHome}
-              className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-transparent hover:bg-gray-200/70 dark:hover:bg-gray-700/70 rounded-lg transition-all duration-300"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                console.log('[Dashboard] Back to home button clicked')
+                onBackToHome()
+                console.log('[Dashboard] onBackToHome called')
+              }}
+              className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-transparent hover:bg-gray-200/70 dark:hover:bg-gray-700/70 rounded-lg transition-all duration-300 relative z-50"
               title="Back to Home"
+              type="button"
+              style={{ pointerEvents: 'auto' }}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -636,8 +649,13 @@ return (
           <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Your Projects</h3>
           {(isAdmin || isUploader) && (
             <button
-              onClick={() => setShowAddProject(true)}
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setShowAddProject(true)
+              }}
               className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 flex items-center gap-2 shadow-lg hover:shadow-xl"
+              type="button"
             >
               <Plus className="w-5 h-5" />
               Add Project
@@ -674,20 +692,40 @@ return (
                   {/* Hover Actions */}
                   <motion.div
                     initial={{ opacity: 0 }}
-                    animate={{ opacity: hoveredProject === project.id ? 1 : 0 }}
+                    animate={{ 
+                      opacity: hoveredProject === project.id ? 1 : 0,
+                      pointerEvents: hoveredProject === project.id ? 'auto' : 'none'
+                    }}
                     className="absolute inset-0 bg-black/50 flex items-center justify-center gap-4"
+                    style={{ pointerEvents: hoveredProject === project.id ? 'auto' : 'none' }}
                   >
                     <button
-                      onClick={() => onOpenViewer(project)}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        // Immediately clear hover state to prevent any interference
+                        setHoveredProject(null)
+                        // Use setTimeout to ensure hover state is cleared before opening viewer
+                        setTimeout(() => {
+                          onOpenViewer(project)
+                        }, 0)
+                      }}
                       className="bg-red-600 hover:bg-red-700 text-white p-3 rounded-full transition-colors duration-300"
                       title="View 3D Model"
+                      type="button"
                     >
                       <Eye className="w-5 h-5" />
                     </button>
                     <button
-                      onClick={() => onOpenBaseline(project)}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setHoveredProject(null)
+                        onOpenBaseline(project)
+                      }}
                       className="bg-green-600 hover:bg-green-700 text-white p-3 rounded-full transition-colors duration-300"
                       title="View Baseline"
+                      type="button"
                     >
                       <FileText className="w-5 h-5" />
                     </button>

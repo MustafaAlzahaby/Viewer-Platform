@@ -6,15 +6,19 @@ export class ViewsManager {
   private components: OBC.Components;
   private views: OBC.Views;
   private world: OBC.World;
+  private caster: OBC.SimpleRaycaster;
   public clipper: OBC.Clipper;
   private panel: HTMLElement | null = null;
   private fragmentManager: any;
+  private levelNameToGroup: Record<string, string> = {};
+  private groupToLevels: Record<string, string[]> = {};
 
   // Keep for tracking which models were highlighted so we can reset cleanly
   private originalSlabMaterials: Map<string, any> = new Map();
   // Optional: still keep mesh refs for logging/utility controls
   private slabElements: Set<THREE.Mesh> = new Set();
   private is2DViewActive: boolean = false;
+  private slabsInitialized = false;
 
   constructor(components: OBC.Components, world: OBC.World) {
     this.components = components;
@@ -29,8 +33,8 @@ export class ViewsManager {
     this.fragmentManager = components.get(OBC.FragmentsManager);
 
     // Raycaster (not used for this feature but kept for your future needs)
-    // const casters = components.get(OBC.Raycasters);
-    // const caster = casters.get(world);
+    const casters = components.get(OBC.Raycasters);
+    this.caster = casters.get(world);
 
     this.clipper = components.get(OBC.Clipper);
     this.clipper.enabled = true;
@@ -65,6 +69,8 @@ export class ViewsManager {
   }
 
   async initialize(): Promise<void> {
+    await this.loadLevelGroupsConfig();
+
     // Try multiple strategies to create storey views
     let storeyViewsCreated = false;
 
@@ -136,8 +142,8 @@ export class ViewsManager {
     this.slabElements.clear();
 
     const fragments = this.fragmentManager.list;
-    fragments.forEach((fragment: any, _modelId: string) => {
-      // console.log(`Scanning fragment ${_modelId} for slabs...`);
+    fragments.forEach((fragment: any, modelId: string) => {
+      // console.log(`Scanning fragment ${modelId} for slabs...`);
       this.identifySlabElements(fragment);
     });
 
@@ -146,12 +152,20 @@ export class ViewsManager {
       // console.log("No slabs found with standard method, trying alternative approaches...");
       this.tryAlternativeSlabDetection();
     }
+
+    this.slabsInitialized = true;
+  }
+
+  private ensureSlabsPrepared(): void {
+    if (!this.slabsInitialized) {
+      this.scanAllFragmentsForSlabs();
+    }
   }
 
   private tryAlternativeSlabDetection(): void {
     // console.log("Trying alternative slab detection...");
     const fragments = this.fragmentManager.list;
-    fragments.forEach((fragment: any, _modelId: string) => {
+    fragments.forEach((fragment: any, modelId: string) => {
       const fragmentObject = fragment.object;
       if (!fragmentObject) return;
 
@@ -281,15 +295,17 @@ export class ViewsManager {
     // Typical slab-ish categories across IFCs
     const categoryRegexes = [/^IfcSlab$/i, /^IfcCovering$/i, /^IfcPlate$/i, /^IfcFloor$/i];
 
-    for (const [modelId, fragment] of this.fragmentManager.list as Map<string, any>) {
+    const fragments = this.fragmentManager.list as Map<string, any>;
+    for (const [modelId, fragment] of fragments.entries()) {
       try {
         if (typeof fragment.getItemsOfCategories !== "function") continue;
 
         const byCat = await fragment.getItemsOfCategories(categoryRegexes);
         // byCat looks like { IfcSlab: number[], IfcCovering: number[] ... }
-        const ids = Object.values(byCat)
+        const rawValues = Object.values(byCat) as unknown[];
+        const ids = rawValues
           .flat()
-          .filter((n): n is number => Number.isFinite(n));
+          .filter((n): n is number => typeof n === "number" && Number.isFinite(n));
 
         if (ids.length > 0) {
           result.set(modelId, ids);
@@ -374,30 +390,24 @@ export class ViewsManager {
   // View open/close
   // ────────────────────────────────────────────────────────────────────────
 
-  public openView(viewName: string): void {
-    // console.log(`Opening 2D view: ${viewName}`);
+  public openView(groupOrViewKey: string, fallbackViewKey?: string): void {
+    this.ensureSlabsPrepared();
 
-    // Make sure we have slabs identified (for logs / panel info)
-    // console.log("Rescanning for slabs before opening view...");
-    this.scanAllFragmentsForSlabs();
+    const underlyingViews = this.getUnderlyingViewsForGroup(groupOrViewKey);
+    const viewToOpen = underlyingViews[0] ?? fallbackViewKey ?? groupOrViewKey;
 
-    this.views.open(viewName);
+    this.views.open(viewToOpen);
 
-    // Apply light gray highlighting with a couple of retries
     setTimeout(async () => {
-      // console.log("Attempting to apply light gray slab styling...");
       await this.applySlabStyling();
     }, 200);
 
     setTimeout(async () => {
-      // console.log("Second attempt at styling slabs...");
       await this.applySlabStyling();
     }, 800);
 
     setTimeout(async () => {
       if (!this.is2DViewActive) {
-        // console.log("Final attempt: comprehensive slab detection...");
-        this.scanAllFragmentsForSlabs();
         await this.applySlabStyling();
       }
     }, 1500);
@@ -417,14 +427,14 @@ export class ViewsManager {
     try {
       // console.log("Starting advanced manual storey view creation...");
 
-      const fragments = this.fragmentManager.list;
+      const fragments = this.fragmentManager.list as Map<string, any>;
       if (fragments.size === 0) {
         // console.warn("No fragments available for manual storey view creation");
         return;
       }
 
-      const [_modelId, fragment] = Array.from(fragments.entries())[0] as [string, any];
-      // console.log(`Processing fragment: ${_modelId}`);
+      const [modelId, fragment] = Array.from(fragments.entries())[0];
+      // console.log(`Processing fragment: ${modelId}`);
 
       let spatialElements: any[] = [];
 
@@ -522,7 +532,7 @@ export class ViewsManager {
       const target = center.clone();
       target.y = elevation;
 
-      await (this.views.create as any)({
+      await this.views.create({
         name: String(name),
         world: this.world,
         camera: {
@@ -569,7 +579,7 @@ export class ViewsManager {
           const target = center.clone();
           target.y = level.elevation;
 
-          await (this.views.create as any)({
+          await this.views.create({
             name: level.name,
             world: this.world,
             camera: {
@@ -593,99 +603,228 @@ export class ViewsManager {
   // UI Panel
   // ────────────────────────────────────────────────────────────────────────
 
-  private createUI(): void {
-  BUI.Manager.init();
+  private createUI(): HTMLElement | null {
+    return this.createGroupedViewsPanel();
+  }
 
-  type ViewsListTableData = { Name: string; Actions: string };
-  interface ViewsListState { components: OBC.Components }
+  private createGroupedViewsPanel(): HTMLElement | null {
+    BUI.Manager.init();
+    const rows = this.getDisplayRows();
 
-  const viewsTemplate: BUI.StatefullComponent<ViewsListState> = (state) => {
-    const views = state.components.get(OBC.Views);
-    const onCreated = (e?: Element) => {
-      if (!e) return;
-      const table = e as BUI.Table<ViewsListTableData>;
-      table.data = [...views.list.keys()].map((key) => ({
-        data: { Name: key, Actions: "" },
-      }));
-    };
-    return BUI.html`<bim-table ${BUI.ref(onCreated)}></bim-table>`;
-  };
-
-  const [viewsTable, updateViewsTable] = BUI.Component.create<
-    BUI.Table<ViewsListTableData>,
-    ViewsListState
-  >(viewsTemplate, { components: this.components });
-
-  viewsTable.headersHidden = true;
-  viewsTable.noIndentation = true;
-  viewsTable.columns = ["Name", { name: "Actions", width: "auto" }];
-
-  viewsTable.dataTransform = {
-    Actions: (_, rowData) => {
-      const { Name } = rowData;
-      if (!Name) return _;
-      const views = this.components.get(OBC.Views);
-      const view = views.list.get(Name);
-      if (!view) return _;
-
-      const onOpen = () => this.openView(Name);
-
+    this.panel = BUI.Component.create<BUI.PanelSection>(() => {
       return BUI.html`
-        <bim-button label-hidden icon="solar:cursor-bold" @click=${onOpen}></bim-button>
-      `;
-    },
-  };
-
-  const refresh = () => updateViewsTable();
-  this.views.list.onItemSet.add(refresh);
-  this.views.list.onItemDeleted.add(refresh);
-  this.views.list.onItemUpdated.add(refresh);
-  this.views.list.onCleared.add(refresh);
-
-  this.panel = BUI.Component.create<BUI.PanelSection>(() => {
-    // Unused callbacks - kept for potential future UI integration
-    // const _onClose = () => this.closeCurrentView();
-    // const _onInspect = () => this.inspectModels();
-    // const _onToggleSlabs = () => this.toggleSlabVisibility();
-    // const _onSetLightOpacity = () => this.setSlabOpacity(0.2);
-    // const _onSetMediumOpacity = () => this.setSlabOpacity(0.5);
-    // const _onRestoreMaterials = () => this.restoreSlabMaterials();
-    // const _onForceSlabStyling = () => this.applySlabStyling();
-    // const _onListAllMeshes = () => this.listAllMeshes();
-    // const _onRescanSlabs = () => this.scanAllFragmentsForSlabs();
-
-    return BUI.html`
-      <div class="right-panel-section views-section">
-        <div class="panel-header" @click=${() => this.togglePanel()}>
-          <div class="panel-header-content">
-            <div class="panel-title">
-              <svg class="panel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                <line x1="9" y1="9" x2="15" y2="15"/>
-                <line x1="15" y1="9" x2="9" y2="15"/>
-              </svg>
-              <span>2D Views</span>
+        <div class="right-panel-section views-section">
+          <div class="panel-header" @click=${() => this.togglePanel()}>
+            <div class="panel-header-content">
+              <div class="panel-title">
+                <svg class="panel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="9" y1="9" x2="15" y2="15"/>
+                  <line x1="15" y1="9" x2="9" y2="15"/>
+                </svg>
+                <span>2D Views</span>
+              </div>
+              <button class="collapse-toggle">
+                <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="6,9 12,15 18,9"></polyline>
+                </svg>
+              </button>
             </div>
-            <button class="collapse-toggle">
-              <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="6,9 12,15 18,9"></polyline>
-              </svg>
-            </button>
           </div>
-        </div>
 
         <div class="panel-content">
-          <div class="views-table-container">
-            ${viewsTable}
+          <!-- Modern Reset Section -->
+          <div class="modern-reset-section">
+            <div class="reset-container">
+              <div class="reset-item">
+                <div class="reset-content">
+                  <div class="reset-info">
+                    <span class="reset-title">Reset 2D Views</span>
+                    <span class="reset-description">Restore default view</span>
+                  </div>
+                  <button class="modern-reset-btn" @click=${() => this.closeCurrentView()}>
+                    <svg class="reset-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                      <path d="M21 3v5h-5"/>
+                      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                      <path d="M3 21v-5h5"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="views-list">
+            ${rows.map(
+              (row) => BUI.html`
+                <div class="view-item">
+                  <div class="view-item-content">
+                    <div class="view-item-info">
+                      <span class="view-item-name">${row.displayName}</span>
+                    </div>
+                    <button
+                      class="view-item-button"
+                      @click=${(event: MouseEvent) => {
+                        event.stopPropagation();
+                        this.openView(row.displayName, row.viewKey);
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="8,5 16,12 8,19"></polyline>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              `
+            )}
           </div>
         </div>
-      </div>
-    `;
-  });
+        </div>
+      `;
+    });
 
-  // Set the panel as collapsed by default
-  this.setCollapsed(true);
-}
+    this.setCollapsed(true);
+    return this.panel;
+  }
+
+  private normalizeLevelName(name: string): string {
+    return name.toLowerCase().replace(/[^a-z0-9]/g, "");
+  }
+
+  private async loadLevelGroupsConfig(): Promise<void> {
+    this.groupToLevels = {};
+    this.levelNameToGroup = {};
+
+    try {
+      const response = await fetch("./config.json");
+      if (!response.ok) {
+        console.warn(`config.json returned ${response.status}; using raw view names`);
+        return;
+      }
+
+      const config = await response.json();
+      const groups = config?.levelGroups;
+
+      if (groups && typeof groups === "object") {
+        this.groupToLevels = groups as Record<string, string[]>;
+
+        for (const groupName in groups) {
+          const levelNames = groups[groupName];
+          if (!Array.isArray(levelNames)) continue;
+
+          for (const level of levelNames) {
+            if (typeof level === "string" && level.trim().length > 0) {
+              const normalized = this.normalizeLevelName(level);
+              this.levelNameToGroup[normalized] = groupName;
+            }
+          }
+        }
+      } else {
+        console.warn("levelGroups missing in config.json; using raw view names");
+      }
+    } catch (error) {
+      console.warn("Could not load levelGroups for Views panel:", error);
+    }
+  }
+
+  private getDisplayRows(): Array<{ displayName: string; viewKey: string; subLevels: string[] }> {
+    const viewNames = [...this.views.list.keys()];
+
+    const normalizedMap = new Map<string, string>();
+    for (const name of viewNames) {
+      const normalized = this.normalizeLevelName(name);
+      if (!normalizedMap.has(normalized)) {
+        normalizedMap.set(normalized, name);
+      }
+    }
+
+    const used = new Set<string>();
+    const rows: Array<{ displayName: string; viewKey: string; subLevels: string[] }> = [];
+
+    const groupOrder = ["Basement", "Ground", "First Floor", "Second Floor", "Roof"];
+
+    for (const groupName of groupOrder) {
+      const rawLevels = this.groupToLevels[groupName];
+      if (!Array.isArray(rawLevels)) continue;
+
+      const matchedViews: string[] = [];
+
+      for (const levelName of rawLevels) {
+        const normalized = this.normalizeLevelName(levelName);
+
+        const exact = normalizedMap.get(normalized);
+        const actual =
+          exact ??
+          viewNames.find((v) =>
+            this.normalizeLevelName(v).includes(normalized)
+          );
+
+        if (!actual || used.has(actual)) continue;
+
+        matchedViews.push(actual);
+        used.add(actual);
+      }
+
+      if (matchedViews.length > 0) {
+        rows.push({
+          displayName: groupName,
+          viewKey: matchedViews[0],
+          subLevels: matchedViews,
+        });
+      }
+    }
+
+    const orientations = [
+      { keyword: "front", label: "Front" },
+      { keyword: "back",  label: "Back"  },
+      { keyword: "left",  label: "Left"  },
+      { keyword: "right", label: "Right" },
+    ];
+
+    for (const { keyword, label } of orientations) {
+      const view = viewNames.find((name) => {
+        if (used.has(name)) return false;
+        return this.normalizeLevelName(name).includes(keyword);
+      });
+
+      if (view) {
+        used.add(view);
+        rows.push({
+          displayName: label,
+          viewKey: view,
+          subLevels: [view],
+        });
+      }
+    }
+
+    return rows;
+  }
+
+  private getUnderlyingViewsForGroup(groupName: string): string[] {
+    const allViewNames = [...this.views.list.keys()];
+    const levelNames = this.groupToLevels[groupName];
+
+    if (!levelNames || !Array.isArray(levelNames)) {
+      return [];
+    }
+
+    const matchingViews: string[] = [];
+
+    for (const levelName of levelNames) {
+      const normalized = this.normalizeLevelName(levelName);
+
+      const matchingView = allViewNames.find(viewName =>
+        this.normalizeLevelName(viewName) === normalized ||
+        this.normalizeLevelName(viewName).includes(normalized)
+      );
+
+      if (matchingView && !matchingViews.includes(matchingView)) {
+        matchingViews.push(matchingView);
+      }
+    }
+
+    return matchingViews;
+  }
 
   private togglePanel(): void {
     if (this.panel) this.panel.classList.toggle("collapsed");
@@ -759,7 +898,7 @@ export class ViewsManager {
     // console.log("=== END DETAILED INSPECTION ===");
   }
 
-  private inspectFragmentProperty(fragment: any, propertyName: string, _displayName: string): void {
+  private inspectFragmentProperty(fragment: any, propertyName: string, displayName: string): void {
     try {
       if (fragment[propertyName]) {
         // console.log(`\n${displayName}:`, typeof fragment[propertyName]);
@@ -783,7 +922,7 @@ export class ViewsManager {
     }
   }
 
-  private tryGetStoreyData(fragment: any, _modelId: string): void {
+  private tryGetStoreyData(fragment: any, modelId: string): void {
     // console.log(`\n--- Trying to get storey data for ${modelId} ---`);
 
     const methods = ["getStoreys", "getLevels", "getFloors", "getSpatialElements"];
@@ -794,8 +933,8 @@ export class ViewsManager {
           // console.log(`${method}() returned:`, result);
           if (result && Array.isArray(result)) {
             // console.log(`${method}() found ${result.length} items`);
-            result.slice(0, 3).forEach((_item: any, _index: number) => {
-              // console.log(`  Item ${_index}:`, _item);
+            result.slice(0, 3).forEach((item: any, index: number) => {
+              // console.log(`  Item ${index}:`, item);
             });
           }
         }
@@ -812,7 +951,7 @@ export class ViewsManager {
       for (const method of dmMethods) {
         try {
           if (typeof dataManager[method] === "function") {
-            dataManager[method]();
+            const result = dataManager[method]();
             // console.log(`DataManager.${method}():`, result);
           }
         } catch (error) {
@@ -841,8 +980,8 @@ export class ViewsManager {
     // console.log("=== LISTING ALL MESHES IN MODEL ===");
 
     const fragments = this.fragmentManager.list;
-    fragments.forEach((fragment: any, _modelId: string) => {
-      // console.log(`\n--- Meshes in fragment: ${_modelId} ---`);
+    fragments.forEach((fragment: any, modelId: string) => {
+      // console.log(`\n--- Meshes in fragment: ${modelId} ---`);
 
       const fragmentObject = fragment.object;
       if (!fragmentObject) {
@@ -887,12 +1026,12 @@ export class ViewsManager {
         console.log("Full mesh details:", meshDetails); */
       }
 
-      // const _ifcTypes = meshDetails.reduce((acc: any, mesh) => {
-      //   const type = mesh.ifcType;
-      //   if (!acc[type]) acc[type] = [];
-      //   acc[type].push(mesh.name);
-      //   return acc;
-      // }, {});
+      const ifcTypes = meshDetails.reduce((acc: any, mesh) => {
+        const type = mesh.ifcType;
+        if (!acc[type]) acc[type] = [];
+        acc[type].push(mesh.name);
+        return acc;
+      }, {});
       // console.log("Meshes grouped by IFC type:", ifcTypes);
     });
 

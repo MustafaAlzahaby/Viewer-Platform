@@ -18,8 +18,10 @@ function App() {
   const [appState, setAppState] = useState<AppState>('landing')
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
+  const [isSigningOut, setIsSigningOut] = useState(false)
   const hasRedirectedRef = useRef(false)
   const stateTransitionLockRef = useRef(false)
+  const signOutTimeoutRef = useRef<number | null>(null)
 
   useEffect(() => {
     console.log('[App] State:', {
@@ -31,6 +33,57 @@ function App() {
       stateTransitionLock: stateTransitionLockRef.current
     })
   }, [appState, loading, user, profile])
+
+  // Clear isSigningOut when user signs in (new user detected)
+  useEffect(() => {
+    if (user && isSigningOut) {
+      console.log('[App] New user signed in, clearing isSigningOut flag')
+      setIsSigningOut(false)
+    }
+  }, [user, isSigningOut])
+
+  // Auto-redirect authenticated users from landing page to dashboard
+  useEffect(() => {
+    // Only redirect if:
+    // 1. User exists (profile can be loading)
+    // 2. Currently on landing page
+    // 3. Haven't already redirected
+    // 4. Not in the middle of a state transition
+    // 5. Not currently signing out
+    // 6. Not loading (to avoid race conditions during initial load)
+    // Note: We allow redirect even if profile is null, as it will load in dashboard
+    if (
+      user && 
+      appState === 'landing' && 
+      !hasRedirectedRef.current &&
+      !stateTransitionLockRef.current &&
+      !isSigningOut &&
+      !loading
+    ) {
+      console.log('[App] User authenticated on landing page, redirecting to dashboard')
+      hasRedirectedRef.current = true
+      // Use setTimeout to ensure state updates happen after current render cycle
+      setTimeout(() => {
+        // Double-check we're still not signing out before redirecting
+        if (!isSigningOut) {
+          setAppState('dashboard')
+        } else {
+          console.log('[App] Redirect cancelled - still signing out')
+          hasRedirectedRef.current = false
+        }
+      }, 200)
+    }
+  }, [loading, user, profile, appState, isSigningOut])
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (signOutTimeoutRef.current) {
+        clearTimeout(signOutTimeoutRef.current)
+        signOutTimeoutRef.current = null
+      }
+    }
+  }, [])
 
   const handleOpenViewer = async (project: Project) => {
     console.log('[App] Opening viewer for project:', project.name)
@@ -70,11 +123,73 @@ function App() {
   }
 
   const handleBackToLanding = async () => {
-    console.log('[App] Back to landing')
-    await signOut()
+    console.log('[App] Back to landing - initiating immediate sign out')
+    
+    // Set signing out flag to prevent auto-redirect
+    setIsSigningOut(true)
+    hasRedirectedRef.current = false
+    
+    // Clear any existing timeout
+    if (signOutTimeoutRef.current) {
+      clearTimeout(signOutTimeoutRef.current)
+      signOutTimeoutRef.current = null
+    }
+    
+    // Navigate immediately for instant UX - don't wait for sign out
     setAppState('landing')
     setSelectedProject(null)
-    hasRedirectedRef.current = false
+    
+    // Clear session storage that might interfere (especially from viewer tab)
+    try {
+      sessionStorage.removeItem('supabaseSession')
+      sessionStorage.removeItem('currentProject')
+      console.log('[App] Cleared session storage')
+    } catch (e) {
+      console.warn('[App] Error clearing session storage:', e)
+    }
+    
+    // Sign out in background - completely non-blocking
+    // Use shorter timeout since we're not waiting
+    const signOutTask = (async () => {
+      try {
+        console.log('[App] Starting background sign out...')
+        // Use a shorter timeout (3 seconds) since we're not blocking
+        const signOutPromise = signOut()
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Sign out timeout')), 3000)
+        )
+        
+        await Promise.race([signOutPromise, timeoutPromise])
+        console.log('[App] Background sign out completed')
+      } catch (error) {
+        console.warn('[App] Background sign out timed out or failed (non-critical):', error)
+        // Try direct Supabase sign out as fallback with very short timeout
+        if (supabase) {
+          try {
+            await Promise.race([
+              supabase.auth.signOut(),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1000))
+            ])
+            console.log('[App] Direct Supabase sign out completed')
+          } catch (e) {
+            console.warn('[App] Direct sign out also failed (non-critical):', e)
+          }
+        }
+      } finally {
+        // Clear signing out flag after a brief delay
+        setTimeout(() => {
+          setIsSigningOut(false)
+          console.log('[App] Sign out process finished')
+        }, 300)
+      }
+    })()
+    
+    // Don't await - let it run completely in background
+    signOutTask.catch(() => {
+      // Already handled in the promise
+    })
+    
+    console.log('[App] Sign out initiated, navigated to landing immediately')
   }
 
   const handleGetStarted = () => setShowAuthModal(true)

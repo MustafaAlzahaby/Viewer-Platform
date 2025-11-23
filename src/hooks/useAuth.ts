@@ -227,15 +227,39 @@ export function useAuth() {
 
       console.log('[Auth] Fetching profile for', userId)
 
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle()
+      // Add timeout protection to prevent hanging (especially when viewer tab interferes)
+      let data: any = null
+      let error: any = null
+      
+      try {
+        const profileQuery = supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle()
+        
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+        )
+        
+        const result = await Promise.race([profileQuery, timeoutPromise]) as { data: any, error: any }
+        data = result.data
+        error = result.error
+      } catch (timeoutError) {
+        // Timeout occurred - use fallback profile
+        console.warn('[Auth] Profile fetch timed out, will use fallback profile')
+        error = timeoutError
+        data = null
+      }
 
       if (currentUserIdRef.current !== userId) {
         console.warn('[Auth] Ignoring stale profile fetch for', userId)
         return
+      }
+
+      if (error && error.message?.includes('timeout')) {
+        // Timeout - throw to trigger fallback profile creation
+        throw error
       }
 
       if (error) {
@@ -439,15 +463,39 @@ export function useAuth() {
       setUser(null)
       setProfile(null)
       currentUserIdRef.current = null
+      setLoading(false)
       return { error: null }
     }
 
-    const { error } = await supabase.auth.signOut()
-    setUser(null)
-    setProfile(null)
-    currentUserIdRef.current = null
-    setLoading(false)
-    return { error }
+    try {
+      // Add timeout protection with shorter timeout (3 seconds)
+      // This prevents hanging when viewer tab interferes with auth state
+      const signOutPromise = supabase.auth.signOut()
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Supabase signOut timeout')), 3000)
+      )
+      
+      const { error } = await Promise.race([signOutPromise, timeoutPromise]) as { error: any }
+      
+      // Always clear state, even if there was an error
+      setUser(null)
+      setProfile(null)
+      currentUserIdRef.current = null
+      setLoading(false)
+      
+      return { error }
+    } catch (error) {
+      // If sign out fails or times out, still clear local state immediately
+      console.warn('[Auth] Sign out error or timeout, clearing local state:', error)
+      setUser(null)
+      setProfile(null)
+      currentUserIdRef.current = null
+      setLoading(false)
+      
+      // Don't retry - just clear state and return
+      // The auth state change listener will handle cleanup
+      return { error: error instanceof Error ? error : new Error('Sign out failed') }
+    }
   }, [])
 
   const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
