@@ -108,10 +108,34 @@ export class ModelManager {
           throw new Error(`HTTP ${file.status}: ${file.statusText}`);
         }
         
-        // Convert to arrayBuffer with progress tracking
+        // Convert to arrayBuffer with memory management and timeout
         console.log(`[ModelManager] Reading file data for ${path}...`);
-        const buffer = await file.arrayBuffer();
-        console.log(`[ModelManager] File loaded: ${path}, size: ${(buffer.byteLength / 1024 / 1024).toFixed(2)} MB`);
+        
+        // Get content length for memory check
+        const contentLength = file.headers.get('content-length');
+        const fileSizeMB = contentLength ? (parseInt(contentLength) / 1024 / 1024) : 0;
+        console.log(`[ModelManager] File size: ${fileSizeMB.toFixed(2)} MB`);
+        
+        // Warn if file is very large
+        if (fileSizeMB > 100) {
+          console.warn(`[ModelManager] ⚠️ Large file detected (${fileSizeMB.toFixed(2)} MB). This may take a while...`);
+        }
+        
+        // Convert to arrayBuffer with timeout protection
+        let buffer: ArrayBuffer;
+        try {
+          const arrayBufferPromise = file.arrayBuffer();
+          const timeoutPromise = new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error('arrayBuffer conversion timeout (60s)')), 60000)
+          );
+          
+          buffer = await Promise.race([arrayBufferPromise, timeoutPromise]);
+          console.log(`[ModelManager] File loaded: ${path}, size: ${(buffer.byteLength / 1024 / 1024).toFixed(2)} MB`);
+        } catch (bufferError) {
+          const errorMsg = bufferError instanceof Error ? bufferError.message : String(bufferError);
+          console.error(`[ModelManager] Failed to convert ${path} to arrayBuffer:`, errorMsg);
+          throw new Error(`Memory/timeout error loading ${path}: ${errorMsg}`);
+        }
 
         if (buffer.byteLength === 0) {
           throw new Error(`Empty file: ${path}`);
@@ -123,6 +147,16 @@ export class ModelManager {
         const loadedFragment = await fragments.core.load(buffer, { modelId });
         console.log(`[ModelManager] ✓ Successfully loaded: ${modelId}`);
         results.push(loadedFragment);
+        
+        // Force garbage collection hint and small delay between loads
+        // This helps prevent memory exhaustion with large files
+        if (i < fragPaths.length - 1) {
+          // Small delay to let browser process memory
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        // Clear buffer reference to help with memory (browser will GC when ready)
+        // Note: We can't explicitly null the buffer, but the delay helps
         
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
