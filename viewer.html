@@ -88,25 +88,9 @@
         try {
           const project = JSON.parse(storedProject)
           window.currentProject = project
-          console.log('[Viewer] Project loaded:', project.name)
-          console.log('[Viewer] Full project data:', project)
-          // Check both model_url and model_object_path
-          const modelPath = project.model_url || project.model_object_path
-          console.log('[Viewer] Model URL:', modelPath)
-          console.log('[Viewer] Excel URL:', project.excel_url)
-          
-          // If model path or excel_url are missing, log a warning
-          if (!modelPath) {
-            console.warn('[Viewer] ⚠️ No model_url or model_object_path in project data, will use default models')
-          }
-          if (!project.excel_url) {
-            console.warn('[Viewer] ⚠️ No excel_url in project data, will use default Excel file')
-          }
         } catch (error) {
           console.error('[Viewer] Failed to parse project data:', error)
         }
-      } else {
-        console.warn('[Viewer] ⚠️ No project data found in sessionStorage')
       }
       
       // If you're using Supabase in the viewer, restore session silently
@@ -114,13 +98,9 @@
         try {
           const session = JSON.parse(storedSession)
           window.restoredSession = session
-          console.log('[Viewer] Session data prepared for restoration')
-          console.log('[Viewer] User:', session.user?.email)
         } catch (error) {
           console.error('[Viewer] Failed to parse session:', error)
         }
-      } else {
-        console.warn('[Viewer] ⚠️ No session data found - viewer may not be authenticated')
       }
       
       // ✅ Optional: Monitor if parent window closes/navigates away
