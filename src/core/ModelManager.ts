@@ -31,13 +31,16 @@ export class ModelManager {
     
     let fragPaths: string[] = [];
     
-    if (projectData.model_url) {
-      // If project has a model_url, use it
+    // Check for model_url or model_object_path (support both field names)
+    const modelPath = projectData.model_url || projectData.model_object_path;
+    
+    if (modelPath) {
+      // If project has a model path, use it
       // Support both single file and array of files
-      if (Array.isArray(projectData.model_url)) {
-        fragPaths = projectData.model_url;
+      if (Array.isArray(modelPath)) {
+        fragPaths = modelPath;
       } else {
-        fragPaths = [projectData.model_url];
+        fragPaths = [modelPath];
       }
       console.log('[ModelManager] Loading model from project:', fragPaths);
     } else {

@@ -90,12 +90,14 @@
           window.currentProject = project
           console.log('[Viewer] Project loaded:', project.name)
           console.log('[Viewer] Full project data:', project)
-          console.log('[Viewer] Model URL:', project.model_url)
+          // Check both model_url and model_object_path
+          const modelPath = project.model_url || project.model_object_path
+          console.log('[Viewer] Model URL:', modelPath)
           console.log('[Viewer] Excel URL:', project.excel_url)
           
-          // If model_url or excel_url are missing, log a warning
-          if (!project.model_url) {
-            console.warn('[Viewer] ⚠️ No model_url in project data, will use default models')
+          // If model path or excel_url are missing, log a warning
+          if (!modelPath) {
+            console.warn('[Viewer] ⚠️ No model_url or model_object_path in project data, will use default models')
           }
           if (!project.excel_url) {
             console.warn('[Viewer] ⚠️ No excel_url in project data, will use default Excel file')
