@@ -55,37 +55,78 @@ export class ModelManager {
     });
     
     console.log('[ModelManager] Final model paths:', fragPaths);
+    
+    // Test if we can access the public folder
+    try {
+      const testResponse = await fetch('/Rowad-Logo.ico', { method: 'HEAD' });
+      console.log('[ModelManager] Public folder accessibility test:', testResponse.ok ? 'OK' : 'FAILED', testResponse.status);
+    } catch (e) {
+      console.warn('[ModelManager] Public folder test failed:', e);
+    }
 
-    const loadResults = await Promise.all(
+    const loadResults = await Promise.allSettled(
       fragPaths.map(async (path) => {
         const modelId = path.split("/").pop()?.split(".").shift();
         if (!modelId) {
-          console.warn(`[ModelManager] Invalid model path: ${path}`);
-          return null;
+          throw new Error(`Invalid model path: ${path}`);
         }
 
+        console.log(`[ModelManager] Fetching model from: ${path}`);
+        
+        // Add timeout to fetch (30 seconds)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        
+        let file: Response;
         try {
-          console.log(`[ModelManager] Fetching model from: ${path}`);
-          const file = await fetch(path);
-          if (!file.ok) {
-            console.error(`[ModelManager] Failed to load ${path}: ${file.status} ${file.statusText}`);
-            return null;
+          file = await fetch(path, { 
+            signal: controller.signal,
+            cache: 'no-cache' // Ensure we're not getting cached errors
+          });
+          clearTimeout(timeoutId);
+        } catch (fetchError: any) {
+          clearTimeout(timeoutId);
+          if (fetchError.name === 'AbortError') {
+            throw new Error(`Timeout loading ${path} (30s)`);
+          } else {
+            throw new Error(`Network error loading ${path}: ${fetchError.message || 'Unknown error'}`);
           }
-          const buffer = await file.arrayBuffer();
-          console.log(`[ModelManager] Loaded ${path}, size: ${buffer.byteLength} bytes`);
-
-          this.modelIds.push(modelId); // Save the modelId
-          const loadedFragment = await fragments.core.load(buffer, { modelId });
-          console.log(`[ModelManager] Successfully loaded fragment for model: ${modelId}`);
-          return loadedFragment;
-        } catch (error) {
-          console.error(`[ModelManager] Error loading ${path}:`, error);
-          return null;
         }
+        
+        if (!file.ok) {
+          const errorMsg = `HTTP ${file.status}: ${file.statusText}`;
+          console.error(`[ModelManager] Failed to load ${path}: ${errorMsg}`);
+          console.error(`[ModelManager] Response headers:`, Object.fromEntries(file.headers.entries()));
+          throw new Error(errorMsg);
+        }
+        
+        const buffer = await file.arrayBuffer();
+        console.log(`[ModelManager] Loaded ${path}, size: ${buffer.byteLength} bytes`);
+
+        if (buffer.byteLength === 0) {
+          throw new Error(`Empty file loaded from ${path}`);
+        }
+
+        this.modelIds.push(modelId); // Save the modelId
+        const loadedFragment = await fragments.core.load(buffer, { modelId });
+        console.log(`[ModelManager] Successfully loaded fragment for model: ${modelId}`);
+        return loadedFragment;
       })
     );
     
-    const successfulLoads = loadResults.filter(r => r !== null).length;
+    // Process results from Promise.allSettled
+    const results = loadResults.map((result, index) => {
+      const path = fragPaths[index];
+      if (result.status === 'fulfilled') {
+        return result.value;
+      } else {
+        const reason = result.reason instanceof Error ? result.reason.message : String(result.reason);
+        console.error(`[ModelManager] Failed to load ${path}:`, reason);
+        return null;
+      }
+    });
+    
+    const successfulLoads = results.filter(r => r !== null).length;
     console.log(`[ModelManager] Loaded ${successfulLoads} out of ${fragPaths.length} models`);
     
     if (successfulLoads === 0) {
