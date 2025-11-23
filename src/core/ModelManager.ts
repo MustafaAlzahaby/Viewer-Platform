@@ -29,6 +29,9 @@ export class ModelManager {
     // Read project data from sessionStorage (set by parent window) - KEEP AUTH LOGIC
     const projectData = (window as any).currentProject || JSON.parse(sessionStorage.getItem('currentProject') || '{}');
     
+    // Default models (zones 1-5 only, no zone 6)
+    const defaultModels = ["models/z5.frag", "models/z2.frag", "models/z3.frag", "models/z4.frag", "models/z1.frag"];
+    
     let fragPaths: string[] = [];
     
     // Check for model_url or model_object_path (support both field names) - KEEP PROJECT DATA LOGIC
@@ -44,24 +47,58 @@ export class ModelManager {
       }
       console.log('[ModelManager] Loading model from project:', fragPaths);
     } else {
-      // Fallback to default models (original working paths - relative, no leading slash)
-      fragPaths = ["models/z5.frag", "models/z2.frag", "models/z3.frag", "models/z4.frag", "models/z1.frag"];
+      // Fallback to default models
+      fragPaths = defaultModels;
       console.log('[ModelManager] Using default models:', fragPaths);
     }
 
     // Original simple parallel loading (from working version - fast and efficient)
-    await Promise.all(
+    const loadResults = await Promise.all(
       fragPaths.map(async (path) => {
         const modelId = path.split("/").pop()?.split(".").shift();
         if (!modelId) return null;
 
-        const file = await fetch(path);
-        const buffer = await file.arrayBuffer();
+        try {
+          const file = await fetch(path);
+          if (!file.ok) {
+            console.warn(`[ModelManager] Failed to load ${path}: ${file.status} ${file.statusText}`);
+            return null;
+          }
+          const buffer = await file.arrayBuffer();
 
-        this.modelIds.push(modelId); // Save the modelId
-        return fragments.core.load(buffer, { modelId });
+          this.modelIds.push(modelId); // Save the modelId
+          return fragments.core.load(buffer, { modelId });
+        } catch (error) {
+          console.error(`[ModelManager] Error loading ${path}:`, error);
+          return null;
+        }
       })
     );
+
+    // If project model failed to load, fall back to defaults
+    const successfulLoads = loadResults.filter(r => r !== null).length;
+    if (successfulLoads === 0 && modelPath && fragPaths.length > 0) {
+      console.warn('[ModelManager] Project model failed to load, falling back to default models');
+      fragPaths = defaultModels;
+      
+      // Try loading defaults
+      await Promise.all(
+        fragPaths.map(async (path) => {
+          const modelId = path.split("/").pop()?.split(".").shift();
+          if (!modelId) return null;
+
+          try {
+            const file = await fetch(path);
+            if (!file.ok) return null;
+            const buffer = await file.arrayBuffer();
+            this.modelIds.push(modelId);
+            return fragments.core.load(buffer, { modelId });
+          } catch (error) {
+            return null;
+          }
+        })
+      );
+    }
 
     return fragments;
   }
