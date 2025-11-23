@@ -1,5 +1,4 @@
 import * as OBC from "@thatopen/components";
-//import * as THREE from "three";
 
 export class ModelManager {
   private world: OBC.World;
@@ -13,7 +12,7 @@ export class ModelManager {
     this.fragmentManager = this.components.get(OBC.FragmentsManager);
   }
 
-  // Static factory method
+  // Factory method
   public static async create(
     world: OBC.World,
     components: OBC.Components
@@ -24,33 +23,47 @@ export class ModelManager {
   }
 
   // -------------------------------------------------------------
-  // INITIALIZATION LOGIC (FIXED)
+  // INITIALIZATION (Vercel-safe)
   // -------------------------------------------------------------
   private async initialize(): Promise<OBC.FragmentsManager> {
     const fragments = await this.initializeWorker();
 
-    // 🎯 FIXED DEFAULT MODELS (includes Z6, which was missing!)
+    // IMPORTANT for Vercel: Always use absolute paths (served from /public/)
+    const base = "/models/";
+
+    // Full correct default model list INCLUDING z6
     const defaultModels = [
-      "models/z1.frag",
-      "models/z2.frag",
-      "models/z3.frag",
-      "models/z4.frag",
-      "models/z5.frag",
-      "models/zone 6.frag"  // REQUIRED for IFC storeys
+      base + "z1.frag",
+      base + "z2.frag",
+      base + "z3.frag",
+      base + "z4.frag",
+      base + "z5.frag",
+      base + "z6.frag"
     ];
 
     let fragPaths: string[] = [];
 
-    // Load project model configs (used by your parent app)
+    // Load project model config
     const projectData =
       (window as any).currentProject ||
       JSON.parse(sessionStorage.getItem("currentProject") || "{}");
 
-    const modelPath = projectData.model_url || projectData.model_object_path;
+    const projectModelPath =
+      projectData.model_url || projectData.model_object_path;
 
-    if (modelPath) {
-      if (Array.isArray(modelPath)) fragPaths = modelPath;
-      else fragPaths = [modelPath];
+    // Use project model if available
+    if (projectModelPath) {
+      if (Array.isArray(projectModelPath)) {
+        fragPaths = projectModelPath.map((p: string) =>
+          p.startsWith("/") ? p : "/" + p
+        );
+      } else {
+        fragPaths = [
+          projectModelPath.startsWith("/")
+            ? projectModelPath
+            : "/" + projectModelPath
+        ];
+      }
 
       console.log("[ModelManager] Loading project models:", fragPaths);
     } else {
@@ -59,50 +72,52 @@ export class ModelManager {
     }
 
     // -------------------------------------------------------------
-    // MAIN LOADER
+    // LOAD MODEL FRAGMENTS
     // -------------------------------------------------------------
     const loadResults = await Promise.all(
       fragPaths.map(async (path) => {
-        const modelId = path.split("/").pop()?.split(".").shift();
+        const modelId = path.split("/").pop()?.split(".")[0];
         if (!modelId) return null;
 
         try {
-          const file = await fetch(path);
-          if (!file.ok) {
+          const res = await fetch(path);
+
+          if (!res.ok) {
             console.warn(`[ModelManager] Failed loading ${path}`);
             return null;
           }
-          const buffer = await file.arrayBuffer();
 
+          const buffer = await res.arrayBuffer();
           this.modelIds.push(modelId);
+
           return fragments.core.load(buffer, { modelId });
-        } catch (error) {
-          console.error(`[ModelManager] Error loading ${path}:`, error);
+        } catch (err) {
+          console.error(`[ModelManager] Error loading ${path}:`, err);
           return null;
         }
       })
     );
 
     // -------------------------------------------------------------
-    // FALLBACK → If project model fails, load all zones (incl. z6)
+    // FALLBACK TO DEFAULT MODELS IF PROJECT FILE FAILED
     // -------------------------------------------------------------
-    const successfulLoads = loadResults.filter((r) => r !== null).length;
+    const successful = loadResults.filter((r) => r !== null).length;
 
-    if (successfulLoads === 0 && modelPath) {
-      console.warn("[ModelManager] Project model failed. Falling back to full default model set (zones 1-6).");
-
-      fragPaths = defaultModels;
+    if (successful === 0 && projectModelPath) {
+      console.warn(
+        "[ModelManager] Project model failed. Falling back to full default model set (zones 1–6)."
+      );
 
       await Promise.all(
         defaultModels.map(async (path) => {
-          const modelId = path.split("/").pop()?.split(".").shift();
+          const modelId = path.split("/").pop()?.split(".")[0];
           if (!modelId) return null;
 
           try {
-            const file = await fetch(path);
-            if (!file.ok) return null;
+            const res = await fetch(path);
+            if (!res.ok) return null;
 
-            const buffer = await file.arrayBuffer();
+            const buffer = await res.arrayBuffer();
             this.modelIds.push(modelId);
 
             return fragments.core.load(buffer, { modelId });
@@ -117,22 +132,25 @@ export class ModelManager {
   }
 
   // -------------------------------------------------------------
-  // WORKER INITIALIZATION (unchanged)
+  // WORKER INITIALIZATION
   // -------------------------------------------------------------
   private async initializeWorker(): Promise<OBC.FragmentsManager> {
-    const githubUrl =
+    const workerUrlRemote =
       "https://thatopen.github.io/engine_fragment/resources/worker.mjs";
 
-    const fetchedUrl = await fetch(githubUrl);
-    const workerBlob = await fetchedUrl.blob();
-    const workerFile = new File([workerBlob], "worker.mjs", {
-      type: "text/javascript",
+    const fetched = await fetch(workerUrlRemote);
+    const blob = await fetched.blob();
+
+    const workerFile = new File([blob], "worker.mjs", {
+      type: "text/javascript"
     });
+
     const workerUrl = URL.createObjectURL(workerFile);
 
     const fragments = this.fragmentManager;
     fragments.init(workerUrl);
 
+    // Camera update listeners
     if (this.world.camera.controls) {
       this.world.camera.controls.addEventListener("rest", () =>
         fragments.core.update(true)
