@@ -2,7 +2,18 @@
     "buildCommand": "npm run build",
     "outputDirectory": "dist",
     "cleanUrls": false,
-    "trailingSlash": false
+    "trailingSlash": false,
+    "headers": [
+    {
+      "source": "/(.frag)",
+      "headers": [
+        {
+          "key": "Content-Encoding",
+          "value": "gzip"
+        }
+      ]
+    }
+  ]
   }
   
   
