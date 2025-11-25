@@ -57,7 +57,7 @@ export class ModelManager {
     
     // Use parallel loading with progress tracking
     await Promise.all(
-      models.map(async ({ path }, index) => {
+      models.map(async ({ path }, _index) => {
         const modelId = path.split("/").pop()?.split(".").shift();
         if (!modelId) return null;
 
@@ -130,7 +130,7 @@ export class ModelManager {
 
     // Debounce camera updates to reduce overhead
     let updateTimeout: number | null = null;
-    this.world.camera.controls.addEventListener("rest", () => {
+    this.world.camera.controls?.addEventListener("rest", () => {
       if (updateTimeout) clearTimeout(updateTimeout);
       updateTimeout = window.setTimeout(() => {
         fragments.core.update(true);
@@ -138,14 +138,16 @@ export class ModelManager {
     });
 
     this.world.onCameraChanged.add((camera) => {
+      const threeCamera = camera.three as THREE.PerspectiveCamera | THREE.OrthographicCamera;
       for (const [, model] of fragments.list) {
-        model.useCamera(camera.three);
+        model.useCamera(threeCamera);
       }
       fragments.core.update(true);
     });
 
     fragments.list.onItemSet.add(({ value: model }) => {
-      model.useCamera(this.world.camera.three);
+      const threeCamera = this.world.camera.three as THREE.PerspectiveCamera | THREE.OrthographicCamera;
+      model.useCamera(threeCamera);
       this.world.scene.three.add(model.object);
       fragments.core.update(true);
     });
