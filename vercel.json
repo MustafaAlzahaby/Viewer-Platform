@@ -2,18 +2,7 @@
     "buildCommand": "npm run build",
     "outputDirectory": "dist",
     "cleanUrls": false,
-    "trailingSlash": false,
-    "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Content-Encoding",
-          "value": "gzip"
-        }
-      ]
-    }
-  ]
+    "trailingSlash": false
   }
   
   
