@@ -4,11 +4,11 @@ import { Activity, Clock, ArrowRight, CheckCircle, Zap, TrendingUp, Cuboid as Cu
 import { DarkModeToggle } from './DarkModeToggle'
 
 interface LandingPageProps {
-  onGetStarted: () => void,
-  onAboutUs?: () => void
+  onGetStarted: () => void;
+  onAboutUs?: () => void;
 }
 
-export function LandingPage({ onGetStarted, onAboutUs }: LandingPageProps) {
+export function LandingPage({ onGetStarted }: LandingPageProps) {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [isVisible, setIsVisible] = useState(false)
 
