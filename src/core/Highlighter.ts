@@ -23,6 +23,9 @@ export class Highlighter {
   private hider: HiderPanel;
   private categoryData: GroupedData | null = null;
   private colorConfig: ColorConfig | null = null;
+  // Batch rendering flags to avoid incremental repaints while applying many highlights
+  private batchMode = false;
+  private pendingUpdate = false;
 
   // Changed to use string keys instead of objects for uniqueness
   public highlightParamsToIds = new Map<string, number[]>();
@@ -133,9 +136,99 @@ export class Highlighter {
     if (progressStatus === "COMPLETED") {
       return 1; // Full opacity for completed
     } else if (progressStatus === "IN_PROGRESS") {
-      return 0.2; // Reduced opacity for in progress
+      return 0.8; // Reduced opacity for in progress
     }
     return 0.6; // Default opacity
+  }
+
+  /**
+   * Begin a batched highlight operation (no renders until endBatch).
+   */
+  public beginBatch(): void {
+    this.batchMode = true;
+    this.pendingUpdate = false;
+  }
+
+  /**
+   * End a batched highlight operation and flush a single render if needed.
+   */
+  public endBatch(): void {
+    this.batchMode = false;
+    if (this.pendingUpdate) {
+      try {
+        this.modelManager.fragmentManager.core.update(true);
+      } catch {
+        // ignore
+      }
+      this.pendingUpdate = false;
+    }
+  }
+
+  /**
+   * Apply a very light, transparent background highlight to all elements
+   * that are NOT part of the given activeItems set.
+   *
+   * This makes active (completed / in-progress) items stand out clearly.
+   */
+  public async applyDimBackground(
+    activeItems: Map<string, Set<number>>,
+    opacity: number = 0.1
+  ): Promise<void> {
+    if (!activeItems.size) return;
+
+    const backgroundMaterialDefinition = {
+      color: new THREE.Color("#CBD5E1"), // neutral gray
+      opacity,
+      transparent: true,
+      renderedFaces: 0,
+    };
+
+    for (const modelId of this.modelManager.modelIds) {
+      const fragment = this.modelManager.fragmentManager.list.get(modelId);
+      if (!fragment) continue;
+
+      let allLocalIds: number[];
+      try {
+        allLocalIds = await fragment.getLocalIds();
+      } catch {
+        continue;
+      }
+
+      if (!allLocalIds || allLocalIds.length === 0) continue;
+
+      const activeForModel = activeItems.get(modelId);
+      const backgroundIds: number[] = [];
+
+      if (activeForModel && activeForModel.size > 0) {
+        // Dim everything except active IDs
+        for (const id of allLocalIds) {
+          if (!activeForModel.has(id)) {
+            backgroundIds.push(id);
+          }
+        }
+      } else {
+        // No active elements in this model: dim the entire model
+        backgroundIds.push(...allLocalIds);
+      }
+
+      if (!backgroundIds.length) continue;
+
+      try {
+        fragment.highlight(backgroundIds, backgroundMaterialDefinition);
+      } catch {
+        continue;
+      }
+    }
+
+    if (this.batchMode) {
+      this.pendingUpdate = true;
+    } else {
+      try {
+        this.modelManager.fragmentManager.core.update(true);
+      } catch {
+        // ignore
+      }
+    }
   }
 
 public async highlight(
@@ -242,7 +335,11 @@ public async highlight(
 
       try {
         model.highlight(localIdsArray, materialDefinition);
-        this.modelManager.fragmentManager.core.update(true);
+        if (this.batchMode) {
+          this.pendingUpdate = true;
+        } else {
+          this.modelManager.fragmentManager.core.update(true);
+        }
         console.log(
           `Successfully highlighted ${localIdsArray.length} items in model ${targetModelId}`
         );
@@ -532,17 +629,23 @@ public async highlight(
     // Clear the highlighted items map
     this.highlightedItems.clear();
 
-    // … Force a render right away so colors disappear immediately
-    try {
-      this.modelManager.fragmentManager.core.update(true);
-    } catch {}
+    // … Force a render right away so colors disappear immediately,
+    // unless we're inside a batch (in which case defer to endBatch)
+    if (this.batchMode) {
+      this.pendingUpdate = true;
+    } else {
+      try {
+        this.modelManager.fragmentManager.core.update(true);
+      } catch {}
+    }
   }
 
   public dispose(): void {
+    this.beginBatch();
     this.resetHighlight();
     this.highlightedItems.clear();
     this.highlightParamsToIds.clear();
-    this.modelManager.fragmentManager.core.update(true);
+    this.endBatch();
   }
 
   // Helper method to highlight all items in all models (for testing)

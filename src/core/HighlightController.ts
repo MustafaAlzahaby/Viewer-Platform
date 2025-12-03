@@ -27,6 +27,7 @@ export class HighlightController {
 
   private controlsContainer: HTMLElement | null = null;
   private statusIndicator: HTMLElement | null = null;
+  private applyingOverlay: HTMLDivElement | null = null;
 
   private statusTimer: NodeJS.Timeout | null = null;
   private STATUS_DISPLAY_DURATION = 3000; // 3 seconds
@@ -332,6 +333,39 @@ export class HighlightController {
     this.addHorizontalToggleListeners();
   }
 
+  private showApplyingOverlay(): void {
+    if (this.applyingOverlay) return;
+    const div = document.createElement("div");
+    div.className = "highlight-applying-overlay";
+    div.innerHTML = `
+      <div class="highlight-applying-card">
+        <div class="highlight-applying-icon">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M8 12l2.5 2.5L16 9" />
+          </svg>
+        </div>
+        <div class="highlight-applying-content">
+          <span class="highlight-applying-title">Updating color mapping</span>
+          <span class="highlight-applying-subtitle">Fetching data and applying visual filters…</span>
+        </div>
+        <div class="highlight-applying-dots" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(div);
+    this.applyingOverlay = div;
+  }
+
+  private hideApplyingOverlay(): void {
+    if (!this.applyingOverlay) return;
+    this.applyingOverlay.remove();
+    this.applyingOverlay = null;
+  }
+
   /**
    * Inject horizontal styles (updated to support dynamic category colors)
    */
@@ -556,6 +590,101 @@ export class HighlightController {
         letter-spacing: -0.01em;
       }
 
+      /* Overlay while applying highlights in batch */
+      .highlight-applying-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.16); /* light tint so blur is visible */
+        backdrop-filter: blur(8px);          /* blur current model frame */
+        z-index: 1500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: all;                 /* block clicks while applying */
+      }
+
+      .highlight-applying-card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 14px 22px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.98);
+        border: 1px solid rgba(226, 232, 240, 0.95);
+        box-shadow:
+          0 18px 45px rgba(15, 23, 42, 0.20),
+          0 4px 14px rgba(15, 23, 42, 0.12);
+        font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+      }
+
+      .highlight-applying-icon {
+        width: 30px;
+        height: 30px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #4f46e5, #06b6d4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9);
+      }
+
+      .highlight-applying-icon svg {
+        width: 16px;
+        height: 16px;
+        stroke: #ffffff;
+        stroke-width: 2;
+        fill: none;
+      }
+
+      .highlight-applying-icon svg circle {
+        opacity: 0.4;
+      }
+
+      .highlight-applying-content {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+      }
+
+      .highlight-applying-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #0f172a;
+        letter-spacing: -0.01em;
+      }
+
+      .highlight-applying-subtitle {
+        font-size: 0.8rem;
+        color: #64748b;
+      }
+
+      .highlight-applying-dots {
+        display: flex;
+        gap: 4px;
+        margin-left: 6px;
+      }
+
+      .highlight-applying-dots span {
+        width: 5px;
+        height: 5px;
+        border-radius: 999px;
+        background: #6366f1;
+        opacity: 0.7;
+        animation: highlightDotsPulse 1s infinite ease-in-out;
+      }
+
+      .highlight-applying-dots span:nth-child(2) {
+        animation-delay: 0.12s;
+      }
+      .highlight-applying-dots span:nth-child(3) {
+        animation-delay: 0.24s;
+      }
+
+      @keyframes highlightDotsPulse {
+        0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+        30% { transform: translateY(-3px); opacity: 1; }
+      }
+
       /* Mobile */
       @media (max-width: 768px) {
         .horizontal-highlight-controls {
@@ -682,9 +811,6 @@ export class HighlightController {
           this.pendingApply = null;
         }
 
-        // Instant clear
-        this.highlighter.resetHighlight();
-
         // Update UI colors based on current data
         this.updateUIColorsFromData();
 
@@ -705,8 +831,12 @@ export class HighlightController {
     const parts: string[] = [];
     const tasks: Promise<void>[] = [];
 
+    // Determine which groups are active based on toggles
+    const activeGroups: ParameterGroup[] = [];
+
     if (this.inProgressOn) {
       parts.push("In Progress");
+      activeGroups.push(...this.processedData.inProgress);
       tasks.push(
         this.highlightPreprocessedDataBatched(
           this.processedData.inProgress,
@@ -716,6 +846,7 @@ export class HighlightController {
     }
     if (this.completedOn) {
       parts.push("Completed");
+      activeGroups.push(...this.processedData.completed);
       tasks.push(
         this.highlightPreprocessedDataBatched(
           this.processedData.completed,
@@ -724,13 +855,46 @@ export class HighlightController {
       );
     }
 
+    // No active filters: clear all highlights in a single batched pass
     if (tasks.length === 0) {
-      this.updateStatusIndicator("Highlighting: none");
+      this.showApplyingOverlay();
+      this.highlighter.beginBatch();
+      try {
+        this.highlighter.resetHighlight();
+        this.updateStatusIndicator("Highlighting: none");
+      } finally {
+        this.highlighter.endBatch();
+        this.hideApplyingOverlay();
+      }
       return;
     }
 
-    await Promise.all(tasks);
-    this.updateStatusIndicator(`Highlighting: ${parts.join(" + ")}`);
+    // Perform all highlights in a single batch so the user sees only the final state
+    this.showApplyingOverlay();
+    this.highlighter.beginBatch();
+
+    try {
+      // 1) Clear previous highlights (batched - no render yet)
+      this.highlighter.resetHighlight();
+
+      // 2) Dim all non-active elements so active ones stand out
+      try {
+        const activeItems = await this.getCombinedItemsForGroups(activeGroups);
+        if (activeItems.size > 0) {
+          await this.highlighter.applyDimBackground(activeItems);
+        }
+      } catch (error) {
+        // If background dimming fails, continue with normal highlighting
+        console.warn("Failed to apply dim background:", error);
+      }
+
+      // 3) Apply the strong colors for the active groups
+      await Promise.all(tasks);
+      this.updateStatusIndicator(`Highlighting: ${parts.join(" + ")}`);
+    } finally {
+      this.highlighter.endBatch();
+      this.hideApplyingOverlay();
+    }
   }
 
   /**
@@ -779,6 +943,30 @@ export class HighlightController {
         )
       );
     }
+  }
+
+  /**
+   * Helper to compute the union of items to highlight across many parameter groups.
+   * Returns a map of modelId -> set of localIds that are "active" (completed or in-progress).
+   */
+  private async getCombinedItemsForGroups(
+    parameterGroups: ParameterGroup[]
+  ): Promise<Map<string, Set<number>>> {
+    const combined = new Map<string, Set<number>>();
+    if (!parameterGroups.length) return combined;
+
+    for (const group of parameterGroups) {
+      const items = await this.getItemsForGroup(group);
+      for (const [modelId, ids] of items) {
+        if (!combined.has(modelId)) {
+          combined.set(modelId, new Set<number>());
+        }
+        const targetSet = combined.get(modelId)!;
+        ids.forEach((id) => targetSet.add(id));
+      }
+    }
+
+    return combined;
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -878,10 +1066,8 @@ export class HighlightController {
       if (cp) cp.checked = this.completedOn;
     }
 
-    // Update UI colors based on current data
+    // Update UI colors based on current data and re-apply in batched flow
     this.updateUIColorsFromData();
-
-    this.highlighter.resetHighlight();
     await this.applyHighlightsFromToggles();
   }
 
@@ -933,7 +1119,6 @@ export class HighlightController {
     // Re-populate the highlightParamsToIds map after data refresh
     await this.populateHighlightParamsMap();
 
-    this.highlighter.resetHighlight();
     this.updateUIColorsFromData();
     await this.applyHighlightsFromToggles();
   }

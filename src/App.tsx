@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { LandingPage } from './components/LandingPage'
-import { AboutUs } from './components/AboutUs'
+// import { AboutUs } from './components/AboutUs'
 import { AuthModal } from './components/AuthModal'
 import { Dashboard } from './components/Dashboard'
 import { BaselinePage } from './components/BaselinePage'
@@ -193,7 +193,7 @@ function App() {
   }
 
   const handleGetStarted = () => setShowAuthModal(true)
-  const handleAboutUs = () => setAppState('about')
+  // const handleAboutUs = () => setAppState('about')
 
   const handleAuthSuccess = () => {
     console.log('[App] Auth success, navigating to dashboard')
@@ -251,12 +251,12 @@ function App() {
 
   switch (appState) {
     case 'landing':
-      content = <LandingPage onGetStarted={handleGetStarted} onAboutUs={handleAboutUs} />
+      content = <LandingPage onGetStarted={handleGetStarted} onAboutUs={() => {}} />
       break
 
-    case 'about':
-      content = <AboutUs onBack={handleBackToLanding} />
-      break
+    // case 'about':
+    //   content = <AboutUs onBack={handleBackToLanding} />
+    //   break
 
     case 'dashboard':
       // Only redirect if we're sure there's no user (not loading and no user)
@@ -334,7 +334,7 @@ function App() {
       break
 
     default:
-      content = <LandingPage onGetStarted={handleGetStarted} onAboutUs={handleAboutUs} />
+      content = <LandingPage onGetStarted={handleGetStarted} onAboutUs={() => {}} />
   }
 
   return (

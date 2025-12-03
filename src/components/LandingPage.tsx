@@ -5,7 +5,7 @@ import { DarkModeToggle } from './DarkModeToggle'
 
 interface LandingPageProps {
   onGetStarted: () => void,
-  onAboutUs: () => void
+  onAboutUs?: () => void
 }
 
 export function LandingPage({ onGetStarted, onAboutUs }: LandingPageProps) {
@@ -147,10 +147,7 @@ export function LandingPage({ onGetStarted, onAboutUs }: LandingPageProps) {
             <div className="hidden lg:flex items-center space-x-8">
               {[
                 { name: 'HOME', action: () => {} },
-                { name: 'ABOUT US', action: onAboutUs },
-                { name: 'PROJECTS', action: onGetStarted },
-                { name: 'DOCUMENTATION', action: () => {} },
-                { name: 'SUPPORT', action: () => {} }
+                { name: 'PROJECTS', action: onGetStarted }
               ].map((item, index) => (
                 <motion.button
                   key={item.name}

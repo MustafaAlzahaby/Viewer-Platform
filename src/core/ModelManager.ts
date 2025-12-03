@@ -57,7 +57,7 @@ export class ModelManager {
     
     // Use parallel loading with progress tracking
     await Promise.all(
-      models.map(async ({ path }, _index) => {
+      models.map(async ({ path }) => {
         const modelId = path.split("/").pop()?.split(".").shift();
         if (!modelId) return null;
 
