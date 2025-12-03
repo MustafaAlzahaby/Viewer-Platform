@@ -5,11 +5,20 @@ body {
   overflow: hidden;
 }
 
+/* Fullscreen viewer container */
 .full-screen {
   width: 100vw;
   height: 100vh;
   position: relative;
   overflow: hidden;
+}
+
+/* On modern mobile browsers, use dynamic viewport height
+   so the viewer fills the screen even as the URL bar hides/shows */
+@supports (height: 100dvh) {
+  .full-screen {
+    height: 100dvh;
+  }
 }
 
 .options-menu {
@@ -188,6 +197,24 @@ body {
   overflow: hidden !important;
   font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
   animation: slideInFromRight 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Medium screens (tablets, small laptops) */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .right-panels-container {
+    width: min(360px, 100vw - 32px) !important;
+    top: 110px !important;   /* push below Activity / toggle header */
+    right: 16px !important;
+    border-radius: 14px !important;
+  }
+}
+
+/* Slight adjustment for small desktops where header is still tall */
+@media (min-width: 1025px) and (max-width: 1280px) {
+  .right-panels-container {
+    top: 90px !important;
+    right: 24px !important;
+  }
 }
 
 @keyframes slideInFromRight {

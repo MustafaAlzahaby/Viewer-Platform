@@ -79,10 +79,12 @@ export class RightPanelsContainer {
       return BUI.html`
         <bim-button class="right-panels-toggler" icon="solar:settings-bold"
           @click="${() => {
-            if (this.container?.classList.contains("right-panels-visible")) {
+            if (!this.container) return;
+
+            if (this.container.classList.contains("right-panels-visible")) {
               this.container.classList.remove("right-panels-visible");
             } else {
-              this.container?.classList.add("right-panels-visible");
+              this.container.classList.add("right-panels-visible");
             }
           }}">
         </bim-button>
@@ -94,22 +96,9 @@ export class RightPanelsContainer {
       top: "20px",
       right: "20px",
       zIndex: "1001",
-      display: "none",
     });
 
-    const mediaQuery = window.matchMedia("(max-width: 768px)");
-    const handleMediaQuery = (e: MediaQueryListEvent | MediaQueryList) => {
-      if (e.matches) {
-        button.style.display = "block";
-        if (this.container) this.container.style.display = "none";
-      } else {
-        button.style.display = "none";
-        if (this.container) this.container.style.display = "block";
-      }
-    };
-
-    mediaQuery.addListener(handleMediaQuery);
-    handleMediaQuery(mediaQuery);
+    // Let CSS media queries decide when the button and panel are visible
     document.body.append(button);
   }
 
