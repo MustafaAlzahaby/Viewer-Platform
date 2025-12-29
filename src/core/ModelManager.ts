@@ -84,7 +84,7 @@ export class ModelManager {
               // Update progress
               this.loadProgress.set(modelId, (loaded / total) * 100);
               this.notifyProgress(totalModels);
-            }
+          }
           }
 
           // Combine chunks into buffer
@@ -135,21 +135,21 @@ export class ModelManager {
       updateTimeout = window.setTimeout(() => {
         fragments.core.update(true);
       }, 100);
-    });
+      });
 
     this.world.onCameraChanged.add((camera) => {
       const threeCamera = camera.three as THREE.PerspectiveCamera | THREE.OrthographicCamera;
-      for (const [, model] of fragments.list) {
+        for (const [, model] of fragments.list) {
         model.useCamera(threeCamera);
-      }
-      fragments.core.update(true);
+        }
+          fragments.core.update(true);
     });
 
     fragments.list.onItemSet.add(({ value: model }) => {
       const threeCamera = this.world.camera.three as THREE.PerspectiveCamera | THREE.OrthographicCamera;
       model.useCamera(threeCamera);
-      this.world.scene.three.add(model.object);
-      fragments.core.update(true);
+        this.world.scene.three.add(model.object);
+          fragments.core.update(true);
     });
 
     return fragments;

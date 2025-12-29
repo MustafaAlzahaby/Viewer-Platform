@@ -6,6 +6,8 @@ import { ExcelDataPanel } from "../core/ExcelDataPanel";
 import { ViewsManager } from "../core/ViewsManager";
 import { RightPanelsContainer } from "../core/RightPanelsContainer";
 import { DetailsWindow } from "../core/DetailsWindow";
+import { ChatbotController } from "../core/ChatbotController";
+import { ChatbotUI } from "../core/ChatbotUI";
 
 export class BimViewerApp {
   private sceneManager: SceneManager;
@@ -17,6 +19,8 @@ export class BimViewerApp {
   private rightPanelsContainer!: RightPanelsContainer;
   // @ts-ignore - DetailsWindow handles its own UI internally
   private _detailsWindow!: DetailsWindow;
+  private chatbotController!: ChatbotController;
+  private chatbotUI!: ChatbotUI;
 
   constructor(containerId: string) {
     this.sceneManager = new SceneManager(containerId);
@@ -112,11 +116,37 @@ export class BimViewerApp {
 
     await this.controller.refreshProcessedData();
 
+    // Initialize Chatbot
+    this.initializeChatbot();
+
     this.clipperInit();
     console.log(
       "base coordination: ",
       this.modelManager.fragmentManager.baseCoordinationMatrix
     );
+  }
+
+  /**
+   * Initialize the AI chatbot
+   */
+  private initializeChatbot(): void {
+    try {
+      // Create chatbot controller with highlight controller, views manager, and hider panel dependencies
+      this.chatbotController = new ChatbotController(
+        this.controller,
+        this.viewsManager,
+        this.hider
+      );
+      
+      // Create and initialize chatbot UI
+      this.chatbotUI = new ChatbotUI(this.chatbotController);
+      this.chatbotUI.initialize();
+      
+      console.log("✅ Chatbot initialized successfully");
+    } catch (error) {
+      console.error("❌ Failed to initialize chatbot:", error);
+      // Continue execution even if chatbot fails to initialize
+    }
   }
 
   private setupExcelIntegration(): void {

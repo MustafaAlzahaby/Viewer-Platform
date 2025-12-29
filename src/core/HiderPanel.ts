@@ -12,6 +12,9 @@ export class HiderPanel {
   public classifier: OBC.Classifier;
   private panel: HTMLElement | null = null;
   private levelGroups: LevelGroupMapping = {};
+  private validatedLevelGroups: LevelGroupMapping = {};
+  private levelsClassification: any = null; // Classification from classifier.list.get("Levels")
+  private currentCategories: string[] = []; // Track current filtered categories
 
   constructor(components: OBC.Components, fragments: OBC.FragmentsManager) {
     this.hider = components.get(OBC.Hider);
@@ -53,9 +56,9 @@ export class HiderPanel {
     // 1) Prepare your "Levels" classification
     await this.classifier.byCategory();
     await this.classifier.byIfcBuildingStorey({ classificationName: "Levels" });
-    const levelsClassification = this.classifier.list.get("Levels");
-    const actualLevelNames = levelsClassification
-      ? Array.from(levelsClassification.keys())
+    this.levelsClassification = this.classifier.list.get("Levels") || null;
+    const actualLevelNames = this.levelsClassification
+      ? Array.from(this.levelsClassification.keys())
       : [];
 
     // Console log all available levels for easy copying
@@ -70,15 +73,15 @@ export class HiderPanel {
     console.log("═══════════════════════════════════════════════");
 
     // Validate level groups - only keep groups whose levels exist in the model
-    const validatedLevelGroups: LevelGroupMapping = {};
+    this.validatedLevelGroups = {};
     for (const [groupName, levelList] of Object.entries(this.levelGroups)) {
       const validLevels = levelList.filter(lvl => actualLevelNames.includes(lvl));
       if (validLevels.length > 0) {
-        validatedLevelGroups[groupName] = validLevels;
+        this.validatedLevelGroups[groupName] = validLevels;
       }
     }
 
-    const levelGroupNames = Object.keys(validatedLevelGroups);
+    const levelGroupNames = Object.keys(this.validatedLevelGroups);
 
     // 1.5) Get all available categories from the loaded models
     const modelCategories = new Set<string>();
@@ -95,12 +98,13 @@ export class HiderPanel {
     const buildMapForLevels = async (levels: string[]): Promise<OBC.ModelIdMap> => {
       const map: OBC.ModelIdMap = {};
       for (const lvl of levels) {
-        const group = levelsClassification!.get(lvl);
+        const group = this.levelsClassification!.get(lvl);
         if (!group) continue;
         const subMap = await group.get();
         for (const [mid, ids] of Object.entries(subMap)) {
           if (!map[mid]) map[mid] = new Set<number>();
-          for (const id of ids) map[mid].add(id);
+          const idsArray = Array.isArray(ids) ? ids : ids instanceof Set ? Array.from(ids) : [];
+          for (const id of idsArray) map[mid].add(id as number);
         }
       }
       return map;
@@ -130,7 +134,7 @@ export class HiderPanel {
         // Collect all actual levels from selected groups
         const allActualLevels: string[] = [];
         for (const groupName of groupNames) {
-          const levels = validatedLevelGroups[groupName] || [];
+          const levels = this.validatedLevelGroups[groupName] || [];
           allActualLevels.push(...levels);
         }
         // Remove duplicates
@@ -224,8 +228,8 @@ export class HiderPanel {
               <div class="modern-isolation-section">
                 <div class="isolation-container">
                   ${levelGroupNames.map((groupName, index) => {
-                    // const _levelCount = validatedLevelGroups[groupName].length;
-                    // const _levelList = validatedLevelGroups[groupName].join(", ");
+                    // const _levelCount = this.validatedLevelGroups[groupName].length;
+                    // const _levelList = this.validatedLevelGroups[groupName].join(", ");
                     
                     return BUI.html`
                       <div class="level-item" style="animation-delay: ${index * 0.05}s">
@@ -367,6 +371,160 @@ export class HiderPanel {
         categoryPanel?.classList.remove('collapsed');
       }
     }
+  }
+
+  /**
+   * Public method to filter/isolate by IFC categories programmatically
+   * @param categories Array of IFC category names (e.g., ["IFCBEAM", "IFCWALL"])
+   * @param additive If true, add to existing categories instead of replacing
+   */
+  public async filterByCategories(categories: string[], additive: boolean = false): Promise<void> {
+    if (!categories.length && !additive) {
+      await this.hider.set(true);
+      this.currentCategories = [];
+      return;
+    }
+
+    // If additive, merge with existing categories
+    if (additive) {
+      const merged = [...new Set([...this.currentCategories, ...categories])];
+      this.currentCategories = merged;
+    } else {
+      this.currentCategories = [...categories];
+    }
+
+    if (this.currentCategories.length === 0) {
+      await this.hider.set(true);
+      return;
+    }
+
+    // Build model ID map for the specified categories
+    const modelIdMap: OBC.ModelIdMap = {};
+    // Use case-insensitive regex to match categories
+    const categoriesRegex = this.currentCategories.map((cat) => new RegExp(`^${cat}$`, "i"));
+
+    for (const [, model] of this.fragments.list) {
+      try {
+        const items = await model.getItemsOfCategories(categoriesRegex);
+        const localIds = Object.values(items).flat();
+        if (localIds.length > 0) {
+          if (!modelIdMap[model.modelId]) modelIdMap[model.modelId] = new Set<number>();
+          for (const id of localIds) modelIdMap[model.modelId].add(id);
+        }
+      } catch (error) {
+        // Continue if category filtering fails for a model
+        continue;
+      }
+    }
+
+    await this.hider.isolate(modelIdMap);
+  }
+
+  /**
+   * Get currently filtered categories
+   */
+  public getCurrentCategories(): string[] {
+    return [...this.currentCategories];
+  }
+
+  /**
+   * Get currently selected level groups
+   */
+  public getCurrentLevelGroups(): string[] {
+    if (!this.panel) {
+      return [];
+    }
+    
+    const checkboxes = this.panel.querySelectorAll<HTMLInputElement>("input.iso-chk");
+    return Array.from(checkboxes)
+      .filter(cb => cb.checked)
+      .map(cb => cb.dataset.group!)
+      .filter(group => group !== undefined);
+  }
+
+  /**
+   * Reset all category filters - show full model
+   */
+  public async resetCategoryFilter(): Promise<void> {
+    this.currentCategories = [];
+    await this.hider.set(true);
+  }
+
+  /**
+   * Public method to filter/isolate by level groups programmatically
+   * @param groupNames Array of level group names (e.g., ["First Floor", "Roof"])
+   * @param additive If true, add to existing level groups instead of replacing
+   */
+  public async filterByLevelGroups(groupNames: string[], additive: boolean = false): Promise<void> {
+    if (!this.panel || !this.levelsClassification) {
+      console.warn("HiderPanel not initialized");
+      return;
+    }
+
+    // Get all level group checkboxes
+    const checkboxes = this.panel.querySelectorAll<HTMLInputElement>("input.iso-chk");
+    
+    if (additive) {
+      // Add to existing checked groups
+      const currentlyChecked = Array.from(checkboxes)
+        .filter(cb => cb.checked)
+        .map(cb => cb.dataset.group!);
+      
+      const merged = [...new Set([...currentlyChecked, ...groupNames])];
+      
+      // Check all merged groups
+      checkboxes.forEach(cb => {
+        if (merged.includes(cb.dataset.group!)) {
+          cb.checked = true;
+        }
+      });
+    } else {
+      // Replace: uncheck all first, then check only the requested groups
+      checkboxes.forEach(cb => {
+        cb.checked = false;
+      });
+      
+      // Check the requested groups
+      checkboxes.forEach(cb => {
+        if (groupNames.includes(cb.dataset.group!)) {
+          cb.checked = true;
+        }
+      });
+    }
+
+    // Apply isolation directly
+    const selectedGroups = additive 
+      ? [...new Set([...Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.dataset.group!), ...groupNames])]
+      : groupNames;
+
+    if (!selectedGroups.length) {
+      await this.hider.set(true);
+      return;
+    }
+
+    // Collect all actual levels from selected groups
+    const allActualLevels: string[] = [];
+    for (const groupName of selectedGroups) {
+      const levels = this.validatedLevelGroups[groupName] || [];
+      allActualLevels.push(...levels);
+    }
+    // Remove duplicates
+    const uniqueLevels = Array.from(new Set(allActualLevels));
+    
+    // Build model ID map
+    const map: OBC.ModelIdMap = {};
+    for (const lvl of uniqueLevels) {
+      const group = this.levelsClassification!.get(lvl);
+      if (!group) continue;
+      const modelIdMap = await group.get();
+      for (const [modelId, ids] of Object.entries(modelIdMap)) {
+        if (!map[modelId]) map[modelId] = new Set<number>();
+        const idsArray = Array.isArray(ids) ? ids : ids instanceof Set ? Array.from(ids) : [];
+        for (const id of idsArray) map[modelId].add(id as number);
+      }
+    }
+    
+    await this.hider.isolate(map);
   }
 }
 

@@ -338,30 +338,146 @@ export class HighlightController {
     const div = document.createElement("div");
     div.className = "highlight-applying-overlay";
     div.innerHTML = `
+      <svg style="position: absolute; width: 0; height: 0;">
+        <defs>
+          <linearGradient id="brainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+          </linearGradient>
+          <linearGradient id="nodeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#ec4899;stop-opacity:1" />
+          </linearGradient>
+          <linearGradient id="connectionGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#6366f1;stop-opacity:0.6" />
+            <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:0.6" />
+          </linearGradient>
+          <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+          </linearGradient>
+        </defs>
+      </svg>
       <div class="highlight-applying-card">
-        <div class="highlight-applying-icon">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="9" />
-            <path d="M8 12l2.5 2.5L16 9" />
-          </svg>
+        <div class="ai-sync-container">
+          <!-- AI Brain Icon with Neural Network -->
+          <div class="ai-brain-wrapper">
+            <svg class="ai-brain-icon" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+              <!-- Neural network nodes -->
+              <circle class="neural-node" cx="30" cy="30" r="4" />
+              <circle class="neural-node" cx="60" cy="20" r="4" />
+              <circle class="neural-node" cx="90" cy="30" r="4" />
+              <circle class="neural-node" cx="30" cy="60" r="4" />
+              <circle class="neural-node" cx="60" cy="60" r="6" />
+              <circle class="neural-node" cx="90" cy="60" r="4" />
+              <circle class="neural-node" cx="30" cy="90" r="4" />
+              <circle class="neural-node" cx="60" cy="100" r="4" />
+              <circle class="neural-node" cx="90" cy="90" r="4" />
+              <!-- Neural connections -->
+              <line class="neural-connection" x1="30" y1="30" x2="60" y2="20" />
+              <line class="neural-connection" x1="60" y1="20" x2="90" y2="30" />
+              <line class="neural-connection" x1="30" y1="30" x2="60" y2="60" />
+              <line class="neural-connection" x1="60" y1="20" x2="60" y2="60" />
+              <line class="neural-connection" x1="90" y1="30" x2="60" y2="60" />
+              <line class="neural-connection" x1="30" y1="60" x2="60" y2="60" />
+              <line class="neural-connection" x1="90" y1="60" x2="60" y2="60" />
+              <line class="neural-connection" x1="30" y1="60" x2="30" y2="90" />
+              <line class="neural-connection" x1="60" y1="60" x2="60" y2="100" />
+              <line class="neural-connection" x1="90" y1="60" x2="90" y2="90" />
+              <line class="neural-connection" x1="30" y1="90" x2="60" y2="100" />
+              <line class="neural-connection" x1="60" y1="100" x2="90" y2="90" />
+              <!-- Brain outline -->
+              <path class="brain-outline" d="M 40 20 Q 60 10 80 20 Q 95 30 100 50 Q 100 70 95 85 Q 85 100 60 105 Q 35 100 25 85 Q 20 70 20 50 Q 20 30 40 20 Z" />
+            </svg>
+          </div>
+          
+          <!-- Data Flow Particles -->
+          <div class="data-flow-container">
+            <div class="data-particle" style="--delay: 0s"></div>
+            <div class="data-particle" style="--delay: 0.2s"></div>
+            <div class="data-particle" style="--delay: 0.4s"></div>
+            <div class="data-particle" style="--delay: 0.6s"></div>
+            <div class="data-particle" style="--delay: 0.8s"></div>
+            <div class="data-particle" style="--delay: 1s"></div>
+          </div>
+          
+          <!-- P6 Source Indicator -->
+          <div class="p6-source">
+            <div class="p6-icon">P6</div>
+            <div class="p6-pulse"></div>
+          </div>
         </div>
+        
         <div class="highlight-applying-content">
-          <span class="highlight-applying-title">Updating color mapping</span>
-          <span class="highlight-applying-subtitle">Fetching data and applying visual filters…</span>
+          <span class="highlight-applying-title">
+            <span class="ai-badge">AI</span>
+            <span class="title-text">Syncing with Primavera P6</span>
+          </span>
+          <span class="highlight-applying-subtitle">
+            <span class="subtitle-dynamic">Analyzing project data...</span>
+          </span>
         </div>
-        <div class="highlight-applying-dots" aria-hidden="true">
-          <span></span>
-          <span></span>
-          <span></span>
+        
+        <!-- Progress Ring -->
+        <div class="progress-ring-wrapper">
+          <svg class="progress-ring" viewBox="0 0 36 36">
+            <circle class="progress-ring-bg" cx="18" cy="18" r="16" />
+            <circle class="progress-ring-fill" cx="18" cy="18" r="16" />
+          </svg>
         </div>
       </div>
     `;
     document.body.appendChild(div);
     this.applyingOverlay = div;
+    
+    // Animate subtitle text dynamically
+    this.animateSubtitleText();
+  }
+
+  private animateSubtitleText(): void {
+    if (!this.applyingOverlay) return;
+    
+    const subtitleEl = this.applyingOverlay.querySelector('.subtitle-dynamic') as HTMLElement;
+    if (!subtitleEl) return;
+    
+    const messages = [
+      'Analyzing project data...',
+      'Processing schedules...',
+      'Mapping elements...',
+      'Applying AI filters...',
+      'Synchronizing visualization...',
+      'Finalizing updates...'
+    ];
+    
+    let currentIndex = 0;
+    const interval = setInterval(() => {
+      if (!this.applyingOverlay || !subtitleEl) {
+        clearInterval(interval);
+        return;
+      }
+      
+      subtitleEl.style.opacity = '0';
+      setTimeout(() => {
+        if (!subtitleEl) return;
+        currentIndex = (currentIndex + 1) % messages.length;
+        subtitleEl.textContent = messages[currentIndex];
+        subtitleEl.style.opacity = '1';
+      }, 200);
+    }, 800);
+    
+    // Store interval ID to clear it when overlay is hidden
+    (this.applyingOverlay as any).__subtitleInterval = interval;
   }
 
   private hideApplyingOverlay(): void {
     if (!this.applyingOverlay) return;
+    
+    // Clear subtitle animation interval
+    const interval = (this.applyingOverlay as any).__subtitleInterval;
+    if (interval) {
+      clearInterval(interval);
+    }
+    
     this.applyingOverlay.remove();
     this.applyingOverlay = null;
   }
@@ -594,95 +710,396 @@ export class HighlightController {
       .highlight-applying-overlay {
         position: fixed;
         inset: 0;
-        background: rgba(15, 23, 42, 0.16); /* light tint so blur is visible */
-        backdrop-filter: blur(8px);          /* blur current model frame */
+        background: rgba(15, 23, 42, 0.25);
+        backdrop-filter: blur(12px);
         z-index: 1500;
         display: flex;
         align-items: center;
         justify-content: center;
-        pointer-events: all;                 /* block clicks while applying */
+        pointer-events: all;
+        animation: overlayFadeIn 0.3s ease-out;
+      }
+
+      @keyframes overlayFadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
       }
 
       .highlight-applying-card {
         display: flex;
         align-items: center;
-        gap: 16px;
-        padding: 14px 22px;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.98);
+        gap: 24px;
+        padding: 28px 40px;
+        border-radius: 24px;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%);
         border: 1px solid rgba(226, 232, 240, 0.95);
         box-shadow:
-          0 18px 45px rgba(15, 23, 42, 0.20),
-          0 4px 14px rgba(15, 23, 42, 0.12);
+          0 24px 60px rgba(15, 23, 42, 0.25),
+          0 8px 20px rgba(15, 23, 42, 0.15),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9);
         font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+        position: relative;
+        overflow: hidden;
+        min-width: 520px;
+        animation: cardSlideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
       }
 
-      .highlight-applying-icon {
-        width: 30px;
-        height: 30px;
-        border-radius: 999px;
-        background: linear-gradient(135deg, #4f46e5, #06b6d4);
+      @keyframes cardSlideUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px) scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      .highlight-applying-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(99, 102, 241, 0.1),
+          transparent
+        );
+        animation: shimmer 2s infinite;
+      }
+
+      @keyframes shimmer {
+        0% { left: -100%; }
+        100% { left: 100%; }
+      }
+
+      /* AI Sync Container */
+      .ai-sync-container {
+        position: relative;
+        width: 120px;
+        height: 120px;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9);
       }
 
-      .highlight-applying-icon svg {
-        width: 16px;
-        height: 16px;
-        stroke: #ffffff;
-        stroke-width: 2;
+      .ai-brain-wrapper {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .ai-brain-icon {
+        width: 100%;
+        height: 100%;
+        filter: drop-shadow(0 4px 12px rgba(99, 102, 241, 0.3));
+        animation: brainPulse 2s ease-in-out infinite;
+      }
+
+      @keyframes brainPulse {
+        0%, 100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1.05);
+          opacity: 0.9;
+        }
+      }
+
+      .brain-outline {
         fill: none;
+        stroke: url(#brainGradient);
+        stroke-width: 2.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        opacity: 0.8;
+        animation: brainGlow 2s ease-in-out infinite;
       }
 
-      .highlight-applying-icon svg circle {
-        opacity: 0.4;
+      @keyframes brainGlow {
+        0%, 100% {
+          stroke-opacity: 0.6;
+        }
+        50% {
+          stroke-opacity: 1;
+        }
+      }
+
+      .neural-node {
+        fill: url(#nodeGradient);
+        filter: drop-shadow(0 2px 4px rgba(99, 102, 241, 0.4));
+        animation: nodePulse 1.5s ease-in-out infinite;
+        transform-origin: center;
+      }
+
+      .neural-node:nth-child(5) {
+        animation-delay: 0s;
+      }
+
+      .neural-node:nth-child(1),
+      .neural-node:nth-child(3),
+      .neural-node:nth-child(7),
+      .neural-node:nth-child(9) {
+        animation-delay: 0.3s;
+      }
+
+      .neural-node:nth-child(2),
+      .neural-node:nth-child(4),
+      .neural-node:nth-child(6),
+      .neural-node:nth-child(8) {
+        animation-delay: 0.6s;
+      }
+
+      @keyframes nodePulse {
+        0%, 100% {
+          transform: scale(1);
+          opacity: 0.7;
+        }
+        50% {
+          transform: scale(1.25);
+          opacity: 1;
+        }
+      }
+
+      .neural-connection {
+        stroke: url(#connectionGradient);
+        stroke-width: 1.5;
+        stroke-opacity: 0.4;
+        animation: connectionFlow 2s ease-in-out infinite;
+      }
+
+      @keyframes connectionFlow {
+        0%, 100% {
+          stroke-opacity: 0.3;
+        }
+        50% {
+          stroke-opacity: 0.7;
+        }
+      }
+
+      /* Data Flow Particles */
+      .data-flow-container {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+
+      .data-particle {
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        border-radius: 50%;
+        box-shadow: 0 0 12px rgba(99, 102, 241, 0.8);
+        animation: dataFlow 2s ease-in-out infinite;
+        animation-delay: var(--delay);
+        left: 20%;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+
+      @keyframes dataFlow {
+        0% {
+          left: 20%;
+          opacity: 0;
+          transform: translateY(-50%) scale(0.5);
+        }
+        50% {
+          opacity: 1;
+          transform: translateY(-50%) scale(1);
+        }
+        100% {
+          left: 80%;
+          opacity: 0;
+          transform: translateY(-50%) scale(0.5);
+        }
+      }
+
+      /* P6 Source Indicator */
+      .p6-source {
+        position: absolute;
+        left: -10px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .p6-icon {
+        position: relative;
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 700;
+        font-size: 12px;
+        letter-spacing: -0.5px;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        z-index: 2;
+      }
+
+      .p6-pulse {
+        position: absolute;
+        width: 36px;
+        height: 36px;
+        background: rgba(99, 102, 241, 0.3);
+        border-radius: 8px;
+        animation: p6Pulse 1.5s ease-out infinite;
+      }
+
+      @keyframes p6Pulse {
+        0% {
+          transform: scale(1);
+          opacity: 0.8;
+        }
+        100% {
+          transform: scale(2);
+          opacity: 0;
+        }
       }
 
       .highlight-applying-content {
         display: flex;
         flex-direction: column;
-        gap: 1px;
+        gap: 6px;
+        flex: 1;
       }
 
       .highlight-applying-title {
-        font-size: 0.9rem;
-        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 1.1rem;
+        font-weight: 700;
         color: #0f172a;
-        letter-spacing: -0.01em;
+        letter-spacing: -0.02em;
+      }
+
+      .ai-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px 10px;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        color: white;
+        font-size: 0.7rem;
+        font-weight: 800;
+        border-radius: 6px;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+        animation: badgeGlow 2s ease-in-out infinite;
+      }
+
+      @keyframes badgeGlow {
+        0%, 100% {
+          box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+        }
+        50% {
+          box-shadow: 0 2px 16px rgba(99, 102, 241, 0.6);
+        }
+      }
+
+      .title-text {
+        background: linear-gradient(135deg, #0f172a, #475569);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
       }
 
       .highlight-applying-subtitle {
-        font-size: 0.8rem;
+        font-size: 0.85rem;
         color: #64748b;
+        font-weight: 500;
       }
 
-      .highlight-applying-dots {
+      .subtitle-dynamic {
+        transition: opacity 0.2s ease;
+      }
+
+      /* Progress Ring */
+      .progress-ring-wrapper {
+        width: 48px;
+        height: 48px;
         display: flex;
-        gap: 4px;
-        margin-left: 6px;
+        align-items: center;
+        justify-content: center;
       }
 
-      .highlight-applying-dots span {
-        width: 5px;
-        height: 5px;
-        border-radius: 999px;
-        background: #6366f1;
-        opacity: 0.7;
-        animation: highlightDotsPulse 1s infinite ease-in-out;
+      .progress-ring {
+        width: 100%;
+        height: 100%;
+        transform: rotate(-90deg);
       }
 
-      .highlight-applying-dots span:nth-child(2) {
-        animation-delay: 0.12s;
-      }
-      .highlight-applying-dots span:nth-child(3) {
-        animation-delay: 0.24s;
+      .progress-ring-bg {
+        fill: none;
+        stroke: rgba(226, 232, 240, 0.5);
+        stroke-width: 3;
       }
 
-      @keyframes highlightDotsPulse {
-        0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-        30% { transform: translateY(-3px); opacity: 1; }
+      .progress-ring-fill {
+        fill: none;
+        stroke: url(#progressGradient);
+        stroke-width: 3;
+        stroke-linecap: round;
+        stroke-dasharray: 100;
+        stroke-dashoffset: 100;
+        animation: progressRing 2s ease-in-out infinite;
+      }
+
+      @keyframes progressRing {
+        0% {
+          stroke-dashoffset: 100;
+        }
+        50% {
+          stroke-dashoffset: 30;
+        }
+        100% {
+          stroke-dashoffset: 100;
+        }
+      }
+
+      /* Mobile Responsive */
+      @media (max-width: 768px) {
+        .highlight-applying-card {
+          min-width: auto;
+          width: calc(100vw - 32px);
+          max-width: 400px;
+          padding: 20px 24px;
+          gap: 16px;
+        }
+        
+        .ai-sync-container {
+          width: 80px;
+          height: 80px;
+        }
+        
+        .highlight-applying-title {
+          font-size: 0.95rem;
+        }
+        
+        .title-text {
+          display: block;
+        }
+        
+        .highlight-applying-subtitle {
+          font-size: 0.75rem;
+        }
       }
 
       /* Mobile */
@@ -861,7 +1278,7 @@ export class HighlightController {
       this.highlighter.beginBatch();
       try {
         this.highlighter.resetHighlight();
-        this.updateStatusIndicator("Highlighting: none");
+      this.updateStatusIndicator("Highlighting: none");
       } finally {
         this.highlighter.endBatch();
         this.hideApplyingOverlay();
@@ -889,8 +1306,8 @@ export class HighlightController {
       }
 
       // 3) Apply the strong colors for the active groups
-      await Promise.all(tasks);
-      this.updateStatusIndicator(`Highlighting: ${parts.join(" + ")}`);
+    await Promise.all(tasks);
+    this.updateStatusIndicator(`Highlighting: ${parts.join(" + ")}`);
     } finally {
       this.highlighter.endBatch();
       this.hideApplyingOverlay();
@@ -1082,6 +1499,50 @@ export class HighlightController {
     if (this.inProgressOn) return "in-progress";
     if (this.completedOn) return "completed";
     return "model";
+  }
+
+  /**
+   * Toggle in-progress checkbox (additive mode)
+   */
+  public async toggleInProgress(enable: boolean): Promise<void> {
+    this.inProgressOn = enable;
+    
+    if (this.controlsContainer) {
+      const ip = this.controlsContainer.querySelector(
+        '[data-highlight="in-progress"]'
+      ) as HTMLInputElement | null;
+      if (ip) ip.checked = this.inProgressOn;
+    }
+    
+    this.updateUIColorsFromData();
+    await this.applyHighlightsFromToggles();
+  }
+
+  /**
+   * Toggle completed checkbox (additive mode)
+   */
+  public async toggleCompleted(enable: boolean): Promise<void> {
+    this.completedOn = enable;
+    
+    if (this.controlsContainer) {
+      const cp = this.controlsContainer.querySelector(
+        '[data-highlight="completed"]'
+      ) as HTMLInputElement | null;
+      if (cp) cp.checked = this.completedOn;
+    }
+    
+    this.updateUIColorsFromData();
+    await this.applyHighlightsFromToggles();
+  }
+
+  /**
+   * Get current checkbox states
+   */
+  public getCheckboxStates(): { inProgress: boolean; completed: boolean } {
+    return {
+      inProgress: this.inProgressOn,
+      completed: this.completedOn,
+    };
   }
 
   // ─────────────────────────────────────────────────────────────────────────

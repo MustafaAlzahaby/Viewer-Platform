@@ -231,7 +231,7 @@ export class Highlighter {
     }
   }
 
-public async highlight(
+  public async highlight(
     modelId?: string,
     levels: string[] = [],
     categories: string[] = [],

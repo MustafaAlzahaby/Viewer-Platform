@@ -383,14 +383,85 @@ export class ViewsManager {
   // View open/close
   // ────────────────────────────────────────────────────────────────────────
 
-  public openView(groupOrViewKey: string, fallbackViewKey?: string): void {
+  public openView(groupOrViewKey: string, fallbackViewKey?: string, force2DView: boolean = false): void {
+    console.log(`[DEBUG openView] Called with:`, { groupOrViewKey, fallbackViewKey, force2DView });
     this.ensureSlabsPrepared();
 
+    // If force2DView is true, skip Level Groups check and go directly to view
+    if (force2DView) {
+      const viewToOpen = fallbackViewKey ?? groupOrViewKey;
+      console.log(`[DEBUG openView] Force 2D view mode - opening: "${viewToOpen}"`);
+      this.views.open(viewToOpen);
+      this.is2DViewActive = true;
+      console.log(`[DEBUG openView] is2DViewActive set to: ${this.is2DViewActive}`);
+      
+      setTimeout(async () => {
+        await this.applySlabStyling();
+      }, 200);
+
+      setTimeout(async () => {
+        await this.applySlabStyling();
+      }, 800);
+
+      setTimeout(async () => {
+        if (!this.is2DViewActive) {
+          await this.applySlabStyling();
+        }
+      }, 1500);
+      return;
+    }
+
+    // First, check if it's a Level Group (prioritize Level Groups over direct view names)
     const underlyingViews = this.getUnderlyingViewsForGroup(groupOrViewKey);
-    const viewToOpen = underlyingViews[0] ?? fallbackViewKey ?? groupOrViewKey;
+    console.log(`[DEBUG openView] getUnderlyingViewsForGroup returned:`, underlyingViews);
+    if (underlyingViews.length > 0) {
+      // It's a Level Group - use the first underlying view
+      const viewToOpen = underlyingViews[0];
+      console.log(`[DEBUG openView] Opening Level Group view: "${viewToOpen}"`);
+      this.views.open(viewToOpen);
+      this.is2DViewActive = false; // Level Groups are not 2D views
+      console.log(`[DEBUG openView] is2DViewActive set to: ${this.is2DViewActive}`);
+      
+      setTimeout(async () => {
+        await this.applySlabStyling();
+      }, 200);
 
+      setTimeout(async () => {
+        await this.applySlabStyling();
+      }, 800);
+
+      setTimeout(async () => {
+        if (!this.is2DViewActive) {
+          await this.applySlabStyling();
+        }
+      }, 1500);
+      return;
+    }
+
+    // Check if the groupOrViewKey exists as a Level Group name (even if no views found)
+    // This prevents opening direct views when a Level Group is intended
+    // Check both groupToLevels keys AND the groupOrder array (for standard level groups)
+    const normalizedGroupName = this.normalizeLevelName(groupOrViewKey);
+    const groupOrder = ["Basement", "Ground", "First Floor", "Second Floor", "Roof"];
+    const isLevelGroup = Object.keys(this.groupToLevels).some(key => 
+      this.normalizeLevelName(key) === normalizedGroupName
+    ) || groupOrder.some(groupName => 
+      this.normalizeLevelName(groupName) === normalizedGroupName
+    );
+    
+    if (isLevelGroup) {
+      // It's a Level Group but no matching views found - don't open as 2D view
+      console.warn(`Level Group "${groupOrViewKey}" found but no matching views available`);
+      return;
+    }
+
+    // If not a Level Group, check if it's a direct view name (2D view)
+    const viewToOpen = fallbackViewKey ?? groupOrViewKey;
+    console.log(`[DEBUG openView] Opening as direct 2D view: "${viewToOpen}"`);
     this.views.open(viewToOpen);
-
+    this.is2DViewActive = true; // Direct view names are 2D views
+    console.log(`[DEBUG openView] is2DViewActive set to: ${this.is2DViewActive}`);
+    
     setTimeout(async () => {
       await this.applySlabStyling();
     }, 200);
@@ -796,29 +867,167 @@ export class ViewsManager {
   }
 
   private getUnderlyingViewsForGroup(groupName: string): string[] {
+    console.log(`[DEBUG getUnderlyingViewsForGroup] Called with: "${groupName}"`);
+    
     const allViewNames = [...this.views.list.keys()];
-    const levelNames = this.groupToLevels[groupName];
-
-    if (!levelNames || !Array.isArray(levelNames)) {
-      return [];
+    console.log(`[DEBUG getUnderlyingViewsForGroup] Total views available: ${allViewNames.length}`, allViewNames);
+    
+    const normalizedGroupName = this.normalizeLevelName(groupName);
+    console.log(`[DEBUG getUnderlyingViewsForGroup] Normalized group name: "${normalizedGroupName}"`);
+    
+    // Get the display rows to find which views are used for Level Groups in the 2D Views panel
+    // The "2D Views" panel contains Level Groups rows (which are 3D views) AND 2D orientation views
+    // We want to use the Level Groups views, not exclude them
+    const displayRows = this.getDisplayRows();
+    console.log(`[DEBUG getUnderlyingViewsForGroup] Display rows:`, displayRows.map(r => ({ 
+      displayName: r.displayName, 
+      viewKey: r.viewKey, 
+      subLevels: r.subLevels 
+    })));
+    
+    // First, try to find the Level Group row that matches this group name
+    // If found, return its subLevels (these are the 3D views we want)
+    for (const row of displayRows) {
+      const normalizedRowName = this.normalizeLevelName(row.displayName);
+      if (normalizedRowName === normalizedGroupName) {
+        // Check if this is a Level Group (not a 2D orientation view)
+        const groupOrder = ["Basement", "Ground", "First Floor", "Second Floor", "Roof"];
+        const isLevelGroup = groupOrder.some(g => 
+          this.normalizeLevelName(g) === normalizedRowName
+        );
+        
+        if (isLevelGroup) {
+          // This is a Level Group row - return its subLevels (these are the 3D views we want)
+          console.log(`[DEBUG getUnderlyingViewsForGroup] Found Level Group row:`, row);
+          console.log(`[DEBUG getUnderlyingViewsForGroup] Returning subLevels:`, row.subLevels);
+          return row.subLevels;
+        }
+      }
     }
-
-    const matchingViews: string[] = [];
-
-    for (const levelName of levelNames) {
-      const normalized = this.normalizeLevelName(levelName);
-
-      const matchingView = allViewNames.find(viewName =>
-        this.normalizeLevelName(viewName) === normalized ||
-        this.normalizeLevelName(viewName).includes(normalized)
-      );
-
-      if (matchingView && !matchingViews.includes(matchingView)) {
-        matchingViews.push(matchingView);
+    
+    // If not found in display rows, fall back to config.json matching
+    // But only exclude 2D orientation views, not Level Group views
+    const orientationKeywords = ["front", "back", "left", "right"];
+    const isOrientationView = (viewName: string): boolean => {
+      const normalized = this.normalizeLevelName(viewName);
+      return orientationKeywords.some(keyword => normalized.includes(keyword));
+    };
+    
+    // First, try exact match in groupToLevels
+    let levelNames = this.groupToLevels[groupName];
+    console.log(`[DEBUG getUnderlyingViewsForGroup] Direct match in groupToLevels:`, levelNames);
+    
+    // If not found, try normalized matching (case-insensitive, ignore spaces)
+    if (!levelNames || !Array.isArray(levelNames)) {
+      for (const [key, value] of Object.entries(this.groupToLevels)) {
+        if (this.normalizeLevelName(key) === normalizedGroupName) {
+          levelNames = value;
+          console.log(`[DEBUG getUnderlyingViewsForGroup] Found normalized match in groupToLevels: "${key}" ->`, value);
+          break;
+        }
       }
     }
 
-    return matchingViews;
+    // If found in groupToLevels, match level names to actual view names
+    // BUT only exclude 2D orientation views (not Level Group views)
+    if (levelNames && Array.isArray(levelNames)) {
+      console.log(`[DEBUG getUnderlyingViewsForGroup] Matching level names to views:`, levelNames);
+      const matchingViews: string[] = [];
+      const normalizedMap = new Map<string, string>();
+      const used = new Set<string>();
+      
+      // Build normalized map for efficient lookup
+      for (const name of allViewNames) {
+        const normalized = this.normalizeLevelName(name);
+        if (!normalizedMap.has(normalized)) {
+          normalizedMap.set(normalized, name);
+        }
+      }
+
+      for (const levelName of levelNames) {
+        const normalized = this.normalizeLevelName(levelName);
+        console.log(`[DEBUG getUnderlyingViewsForGroup] Processing level name: "${levelName}" (normalized: "${normalized}")`);
+
+        // Try exact match first, but only exclude 2D orientation views
+        const exact = normalizedMap.get(normalized);
+        if (exact) {
+          console.log(`[DEBUG getUnderlyingViewsForGroup] Found exact match: "${exact}"`);
+          console.log(`[DEBUG getUnderlyingViewsForGroup] - Is orientation view: ${isOrientationView(exact)}`);
+          console.log(`[DEBUG getUnderlyingViewsForGroup] - Already used: ${used.has(exact)}`);
+        }
+        if (exact && !isOrientationView(exact) && !used.has(exact)) {
+          console.log(`[DEBUG getUnderlyingViewsForGroup] ✅ Adding exact match: "${exact}"`);
+          matchingViews.push(exact);
+          used.add(exact);
+          continue;
+        }
+
+        // Try partial match, but only exclude 2D orientation views
+        const matchingView = allViewNames.find(viewName => {
+          if (isOrientationView(viewName)) {
+            console.log(`[DEBUG getUnderlyingViewsForGroup] Skipping 2D orientation view: "${viewName}"`);
+            return false;
+          }
+          if (used.has(viewName)) return false;
+          
+          const normalizedViewName = this.normalizeLevelName(viewName);
+          const matches = normalizedViewName.includes(normalized);
+          if (matches) {
+            console.log(`[DEBUG getUnderlyingViewsForGroup] Found partial match: "${viewName}" (normalized: "${normalizedViewName}")`);
+          }
+          return matches;
+        });
+
+        if (matchingView) {
+          console.log(`[DEBUG getUnderlyingViewsForGroup] ✅ Adding partial match: "${matchingView}"`);
+          matchingViews.push(matchingView);
+          used.add(matchingView);
+        } else {
+          console.log(`[DEBUG getUnderlyingViewsForGroup] ❌ No match found for "${levelName}"`);
+        }
+      }
+
+      console.log(`[DEBUG getUnderlyingViewsForGroup] Final matching views:`, matchingViews);
+      if (matchingViews.length > 0) {
+        return matchingViews;
+      }
+    }
+
+    // If still not found, check if it's a standard Level Group
+    const groupOrder = ["Basement", "Ground", "First Floor", "Second Floor", "Roof"];
+    const isStandardGroup = groupOrder.some(g => 
+      this.normalizeLevelName(g) === normalizedGroupName
+    );
+    console.log(`[DEBUG getUnderlyingViewsForGroup] Is standard group: ${isStandardGroup}`);
+    
+    if (isStandardGroup) {
+      console.log(`[DEBUG getUnderlyingViewsForGroup] Searching for standard group views...`);
+      // For standard groups, try to find views that match the group name
+      // BUT only exclude 2D orientation views
+      const matchingViews: string[] = [];
+      for (const viewName of allViewNames) {
+        // Skip 2D orientation views
+        if (isOrientationView(viewName)) {
+          console.log(`[DEBUG getUnderlyingViewsForGroup] Skipping 2D orientation view: "${viewName}"`);
+          continue;
+        }
+        
+        const normalizedViewName = this.normalizeLevelName(viewName);
+        if (normalizedViewName === normalizedGroupName || 
+            normalizedViewName.includes(normalizedGroupName) ||
+            normalizedGroupName.includes(normalizedViewName)) {
+          console.log(`[DEBUG getUnderlyingViewsForGroup] ✅ Found standard group view: "${viewName}"`);
+          matchingViews.push(viewName);
+        }
+      }
+      console.log(`[DEBUG getUnderlyingViewsForGroup] Standard group matching views:`, matchingViews);
+      if (matchingViews.length > 0) {
+        return matchingViews;
+      }
+    }
+    
+    console.log(`[DEBUG getUnderlyingViewsForGroup] ❌ No views found for group "${groupName}"`);
+    return [];
   }
 
   private togglePanel(): void {
